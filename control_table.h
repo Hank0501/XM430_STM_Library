@@ -1,3 +1,13 @@
+/**
+ * @file    control_table.h
+ * @author  Z.H. Wu
+ * @brief   Control table of Dynamixel XM430 servo, see
+ *          https://emanual.robotis.com/docs/en/dxl/x/xm430-w350/
+ *
+ * @note    This file does not contain all parameter macro for XM430 servo,
+ *          only commonly used are recorded.
+ */
+
 #ifndef CONTROL_TABLE_H
 #define CONTROL_TABLE_H
 
@@ -9,8 +19,10 @@
 #define OperatingMode_ADDR_HB 0x00
 #define OperatingMode_ByteSize 1
 #define Current_CtrlMode 0
+#define Velocity_CtrlMode 1
 #define POS_CtrlMode 3
-#define CurrentBased_POS_CtrlMode 5
+#define Extended_Pos_CtrlMode 4
+#define PWM_CtrlMode 16
 
 #define TorqueEnable_ADDR_LB 0x40
 #define TorqueEnable_ADDR_HB 0x00
@@ -37,6 +49,9 @@
 #define BaudRate_115200 2
 #define BaudRate_1M 3
 #define BaudRate_2M 4
+#define BaudRate_3M 5
+#define BaudRate_4M 6
+#define BaudRate_4p5M 7
 
 #define ID_ADDR_LB 0x07
 #define ID_ADDR_HB 0x00

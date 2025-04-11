@@ -1,6 +1,21 @@
+/**
+ * @file  my_dynamixel.c
+ * @author Z.H. Wu
+ * @brief STM32 library for Dynamixel XM430 servo
+ *
+ */
+
 #include "my_dynamixel.h"
 #include "stm32f4xx_hal.h"
 
+/**
+ * @brief  Set the RxFinished flag to check whether data received from servo.
+ * @param  servo ServoXM430 structure
+ * @param  val booling value
+ *     @arg true: data received completed
+ *     @arg false: data received incompleted
+ * @retval None
+ */
 void setServoResponse_RxFinished(ServoXM4340 *servo, bool val)
 {
     servo->Response.RxFinished = val;
@@ -39,6 +54,20 @@ void servo_FactoryReset(ServoXM4340 *servo, uint8_t resetvalue)
     } while (!checkServoResponse(servo)); // redo if checking is not OK
 }
 
+/**
+ * @brief  Set the servo BaudRate parameter.
+ * @param  servo ServoXM430 structure
+ * @param  baud Baudrate value
+ *     This parameter can be one of the following values:
+ *     @arg BaudRate_57600: Baud Rate 57600 Mbps
+ *     @arg BaudRate_115200: Baud Rate 115200 Mbps
+ *     @arg BaudRate_1M: Baud Rate 1M Mbps
+ *     @arg BaudRate_2M: Baud Rate 2M Mbps
+ *     @arg BaudRate_3M: Baud Rate 3M Mbps
+ *     @arg BaudRate_4M: Baud Rate 4M Mbps
+ *     @arg BaudRate_4p5M: Baud Rate 4.5M Mbps
+ * @retval None
+ */
 void setServo_BaudRate(ServoXM4340 *servo, uint8_t baud)
 {
 
@@ -72,6 +101,18 @@ void setBroadcast_ID(ServoXM4340 *servo, uint8_t id)
     sendServoCommand(servo->huart, ID_broadcast, INSTRUCTION_WRITE, 3, params_arr);
 }
 
+/**
+ * @brief  Set the servo Operating Mode parameter.
+ * @param  servo ServoXM430 structure
+ * @param  operatingMode Servo operating mode
+ *     This parameter can be one of the following values:
+ *     @arg Current_CtrlMode: Current control mode
+ *     @arg Velocity_CtrlMode: Velocity control mode
+ *     @arg POS_CtrlMode: Position control mode
+ *     @arg Extended_Pos_CtrlMode: Extended Position control mode
+ *     @arg PWM_CtrlMode: PWm control mode
+ * @retval None
+ */
 void setServo_OperatingMode(ServoXM4340 *servo, uint8_t operatingMode)
 {
 
@@ -84,6 +125,15 @@ void setServo_OperatingMode(ServoXM4340 *servo, uint8_t operatingMode)
     dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
 }
 
+/**
+ * @brief  Set the servo TorqueEnable parameter.
+ * @param  servo ServoXM430 structure
+ * @param  torque torque on or off
+ *     This parameter can be one of the following values:
+ *     @arg TORQUE_ENABLE: Torque enable
+ *     @arg TORQUE_DISABLE: Torque disable
+ * @retval None
+ */
 void setServo_TorqueENA(ServoXM4340 *servo, uint8_t torque)
 {
 
@@ -96,6 +146,13 @@ void setServo_TorqueENA(ServoXM4340 *servo, uint8_t torque)
     dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
 }
 
+/**
+ * @brief  Set the servo Goal Current parameter.
+ * @param  servo ServoXM430 structure
+ * @param  current Goal current value
+ * @retval None
+ * @note   Goal current value should not exceed Current Limit value
+ */
 void setServo_GoalCurrent(ServoXM4340 *servo, uint16_t current)
 {
 
@@ -110,10 +167,11 @@ void setServo_GoalCurrent(ServoXM4340 *servo, uint16_t current)
 }
 
 /**
- * @brief  Set the goal position
- * @param  servo XM430 servo structure
- * @param  angle command position, in degree unit
- * @retval None
+ * @brief   Set the servo Goal position parameter.
+ * @param   servo ServoXM430 structure
+ * @param   angle Goal position value, in degree unit
+ * @retval  None
+ * @note    Goal position value has limitation in different operrating mode, see manual.
  */
 void setServo_GoalPosition(ServoXM4340 *servo, const float angle)
 {
@@ -132,6 +190,13 @@ void setServo_GoalPosition(ServoXM4340 *servo, const float angle)
     dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
 }
 
+/**
+ * @brief   Set the servo Current Limit parameter.
+ * @param   servo ServoXM430 structure
+ * @param   current Current limit value
+ * @retval  None
+ * @note    Range of current limit value is 0~1193 for XM430
+ */
 void setServo_CurrentLimit(ServoXM4340 *servo, uint16_t current)
 {
     // parameters calculated and send the instruction
@@ -224,6 +289,11 @@ void setServo_DriveMode(ServoXM4340 *servo, uint8_t conf)
     dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
 }
 
+/**
+ * @brief   Get the servo Baudrate value.
+ * @param   servo ServoXM430 structure
+ * @retval  Baudrate value
+ */
 int getServo_BaudRate(ServoXM4340 *servo)
 {
 
@@ -250,12 +320,26 @@ int getServo_BaudRate(ServoXM4340 *servo)
     case BaudRate_2M:
         return 2000000;
         break;
+    case BaudRate_3M:
+        return 3000000;
+        break;
+    case BaudRate_4M:
+        return 4000000;
+        break;
+    case BaudRate_4p5M:
+        return 4500000;
+        break;
     default:
         break;
     }
     return 0;
 }
 
+/**
+ * @brief   Get the servo ID value.
+ * @param   servo ServoXM430 structure
+ * @retval  ID value
+ */
 uint8_t getServo_ID(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
@@ -284,6 +368,11 @@ uint8_t getServo_DriveMode(ServoXM4340 *servo)
     return servo->Response.params[0];
 }
 
+/**
+ * @brief   Get the servo TorqueEnable parameter value.
+ * @param   servo ServoXM430 structure
+ * @retval  TorqueEnable parameter value, 1 for torque on and 0 for torque off
+ */
 uint8_t getServo_TorqueENA(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
@@ -298,6 +387,11 @@ uint8_t getServo_TorqueENA(ServoXM4340 *servo)
     return servo->Response.params[0];
 }
 
+/**
+ * @brief   Get the servo PresentCurrent parameter value.
+ * @param   servo ServoXM430 structure
+ * @retval  Present Current parameter value, the unit of the value is approximately 2.69 mA, see manual.
+ */
 int16_t getServo_PresentCurrent(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
@@ -316,6 +410,12 @@ int16_t getServo_PresentCurrent(ServoXM4340 *servo)
     return pre_cur;
 }
 
+/**
+ * @brief   Get the servo Goal Current parameter value.
+ * @param   servo ServoXM430 structure
+ * @retval  Goal Current parameter value, the unit of the value is approximately 2.69 mA, see manual.
+ * @
+ */
 int16_t getServo_GoalCurrent(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
@@ -333,6 +433,11 @@ int16_t getServo_GoalCurrent(ServoXM4340 *servo)
     return goal_cur;
 }
 
+/**
+ * @brief   Get the servo Current Limit parameter value.
+ * @param   servo ServoXM430 structure
+ * @retval  Current Limit parameter value, the unit of the value is approximately 2.69 mA, see manual.
+ */
 uint16_t getServo_CurrentLimit(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
@@ -350,6 +455,11 @@ uint16_t getServo_CurrentLimit(ServoXM4340 *servo)
     return cur;
 }
 
+/**
+ * @brief   Get the servo Present Position parameter value.
+ * @param   servo ServoXM430 structure
+ * @retval  Present Position parameter value, the unit of the value is approximately 0.88 deg, see manual.
+ */
 int32_t getServo_PresentPosition(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
@@ -371,6 +481,16 @@ int32_t getServo_PresentPosition(ServoXM4340 *servo)
     return pos;
 }
 
+/**
+ * @brief   Get the servo Operating Mode parameter value.
+ * @param   servo ServoXM430 structure
+ * @retval  OperatingMode parameter value
+ * @retval  0   Current control mode
+ * @retval  1   Velocity control mode
+ * @retval  3   Position control mode
+ * @retval  4   Extended position control mode
+ * @retval  16  PWM control mode
+ */
 uint8_t getServo_OperatingMode(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction

@@ -1,3 +1,10 @@
+/**
+ * @file  my_dynamixel.h
+ * @author Z.H. Wu
+ * @brief Header file of STM32 library for Dynamixel XM430 servo
+ *
+ */
+
 #ifndef MY_DYNAMIXEL_H
 #define MY_DYNAMIXEL_H
 
