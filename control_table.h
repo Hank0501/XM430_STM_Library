@@ -22,6 +22,7 @@
 #define Velocity_CtrlMode 1
 #define POS_CtrlMode 3
 #define Extended_Pos_CtrlMode 4
+#define CurrentBased_POS_CtrlMode 5
 #define PWM_CtrlMode 16
 
 #define TorqueEnable_ADDR_LB 0x40

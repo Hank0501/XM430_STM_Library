@@ -216,7 +216,7 @@ void setServo_ProfileAcceleration(ServoXM4340 *servo, uint16_t maxAcc)
     uint8_t params_arr[6] = {0};
     params_arr[0] = ProfileAcceleration_ADDR_LB;
     params_arr[1] = ProfileAcceleration_ADDR_HB;
-    if (servo->DriveMode & (1 << 2) && maxAcc > ProfileVelocityLimit_T_Based)
+    if ((servo->DriveMode & (1 << 2)) && maxAcc > ProfileVelocityLimit_T_Based)
     {
         // Time-based Profile
         params_arr[2] = (uint8_t)ProfileAccelerationLimit_T_Based & 0x00ff;
@@ -224,7 +224,7 @@ void setServo_ProfileAcceleration(ServoXM4340 *servo, uint16_t maxAcc)
         params_arr[4] = (uint8_t)(ProfileAccelerationLimit_T_Based >> 16) & (0x00ff);
         params_arr[5] = (uint8_t)(ProfileAccelerationLimit_T_Based >> 24) & (0x00ff);
     }
-    else if (servo->DriveMode & (1 << 2) == 0 && maxAcc > ProfileAccelerationLimit_V_Based)
+    else if ((servo->DriveMode & (1 << 2)) == 0 && maxAcc > ProfileAccelerationLimit_V_Based)
     {
         // Velocity-based Profile
         params_arr[2] = (uint8_t)ProfileAccelerationLimit_V_Based & 0x00ff;
@@ -251,7 +251,7 @@ void setServo_ProfileVelocity(ServoXM4340 *servo, uint16_t maxVel)
     uint8_t params_arr[6] = {0};
     params_arr[0] = ProfileVelocity_ADDR_LB;
     params_arr[1] = ProfileVelocity_ADDR_HB;
-    if (servo->DriveMode & (1 << 2) && maxVel > ProfileVelocityLimit_T_Based)
+    if ((servo->DriveMode & (1 << 2)) && maxVel > ProfileVelocityLimit_T_Based)
     {
         // Time-based Profile
         params_arr[2] = (uint8_t)ProfileVelocityLimit_T_Based & 0x00ff;
@@ -259,7 +259,7 @@ void setServo_ProfileVelocity(ServoXM4340 *servo, uint16_t maxVel)
         params_arr[4] = (uint8_t)(ProfileVelocityLimit_T_Based >> 16) & (0x00ff);
         params_arr[5] = (uint8_t)(ProfileVelocityLimit_T_Based >> 24) & (0x00ff);
     }
-    else if (servo->DriveMode & (1 << 2) == 0 && maxVel > ProfileVelocityLimit_V_Based)
+    else if ((servo->DriveMode & (1 << 2)) == 0 && maxVel > ProfileVelocityLimit_V_Based)
     {
         // Velocity-based Profile
         params_arr[2] = (uint8_t)ProfileVelocityLimit_V_Based & 0x00ff;
@@ -607,7 +607,7 @@ void getServoResponse(ServoXM4340 *servo, uint16_t RxLen)
     servo->Response.RxFinished = false;
     clear_RX_buffer(servo);
     // Rx DMA start , data received and processed in Uart_Callback function
-    HAL_UART_Receive_DMA(servo->huart, servo->Response.RxBuffer, RxLen);
+    HAL_UART_Receive_IT(servo->huart, servo->Response.RxBuffer, RxLen);
 
     uint32_t tickstart = HAL_GetTick();
 

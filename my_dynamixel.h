@@ -19,8 +19,8 @@
 
 // maimum number of parameter used
 #define SERVO_MAX_PARAMS 10
-#define SERVO_MAX_TxBYTE 18 //  CRC bytes excluded , 8(Fixed bytes, Header ~ Inst) + SERVO_MAX_PARAMS
-#define SERVO_MAX_RxBYTE 20 //  The entire Rxd Buffer size
+#define SERVO_MAX_TxBYTE 25 //  CRC bytes excluded , 8(Fixed bytes, Header ~ Inst) + SERVO_MAX_PARAMS
+#define SERVO_MAX_RxBYTE 25 //  The entire Rxd Buffer size
 
 // used for response packet prossessing
 #define INDEX_SATUS_PACKET_ID 4
