@@ -1,57 +1,76 @@
 /**
- * @file  my_dynamixel.c
- * @author Z.H. Wu
- * @brief STM32 library for Dynamixel XM430 servo
+ * @file    my_dynamixel.c
+ * @author  Z.H. Wu
+ * @brief   STM32 library for Dynamixel XM430 servo
  *
+ * @note    Most of the function work based on knowing Servo ID,
+ *          please use servo_FactoryReset and getServoResponse_ID to reset servo when you dont know the Servo information
  */
 
 #include "my_dynamixel.h"
 #include "stm32f4xx_hal.h"
 
 /**
- * @brief  Set the RxFinished flag to check whether data received from servo.
- * @param  servo ServoXM430 structure
- * @param  val booling value
- *     @arg true: data received completed
- *     @arg false: data received incompleted
- * @retval None
+ * @brief   Set the RxFinished flag to check whether data received from servo.
+ * @param   servo ServoXM430 structure
+ * @param   val booling value
+ *      @arg    true: data received completed
+ *      @arg    false: data received incompleted
+ * @retval  None
  */
 void setServoResponse_RxFinished(ServoXM4340 *servo, bool val)
 {
     servo->Response.RxFinished = val;
 }
 
-void servo_FactoryReset(ServoXM4340 *servo, uint8_t resetvalue)
+uint8_t getRespRxBuffer_ID(ServoXM4340 *servo)
+{
+    return servo->Response.RxBuffer[INDEX_SATUS_PACKET_ID];
+}
+
+/**
+ * @brief  Reset Servo
+ * @param  servo ServoXM430 structure
+ * @param  resetvalue
+ *     This parameter can be one of the following values:
+ *     @arg FactoryResetAll: Reset all
+ *     @arg FactoryResetAll_exc_Id:  Reset all except ID
+ *     @arg FactoryResetAll_exc_Id_Baud: Reset all except ID and Baudrate
+ * @retval  None
+ * @note    When the Packet ID is the Broadcast ID 0xFE and the configured Option is Reset All,
+ *          the Factory Reset Instruction(0x06) will NOT be executed.
+ */
+void servo_FactoryReset(ServoXM4340 *servo, uint8_t packetID, uint8_t resetvalue)
 {
 
     // parameters calculated and send the instruction
     uint8_t params_arr[1] = {0};
     params_arr[0] = resetvalue;
 
-    // dualTransferServo(servo, INSTRUCTION_FactoryReset, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+    // TX turn on
+    HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
 
-    do
+    sendServoCommand(servo->huart, packetID, INSTRUCTION_FactoryReset, 1, params_arr);
+
+    // RX turn on
+    HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_RESET);
+
+    HAL_UART_DeInit(servo->huart);
+    (*(servo->huart)).Init.BaudRate = 57600;
+    if (HAL_UART_Init(servo->huart) != HAL_OK)
     {
-        // TX turn on
-        HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
+    }
 
-        sendServoCommand(servo->huart, servo->ID, INSTRUCTION_FactoryReset, 1, params_arr);
-        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_SET);
-        // RX turn on
-        HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_RESET);
-
-        HAL_UART_DeInit(servo->huart);
-        (*(servo->huart)).Init.BaudRate = 57600;
-        if (HAL_UART_Init(servo->huart) != HAL_OK)
-        {
-        }
-
-        // DMA turn on and wait for receiving completed
+    // The DYNAMIXEL Broadcast ID (254 (0xFE)) will only return Status Packets for Ping, Sync Read and Bulk Read commands
+    if (packetID != ID_broadcast)
+    {
         getServoResponse(servo, SIZE_STATUS_PACKET);
-        if (servo->state == SERVO_OFFLINE)
-            break;
-
-    } while (!checkServoResponse(servo)); // redo if checking is not OK
+        checkServoResponse(servo);
+    }
+    else
+    {
+        HAL_UART_Receive_IT(servo->huart, servo->Response.RxBuffer, SIZE_STATUS_PACKET);
+    }
 }
 
 /**
@@ -67,6 +86,7 @@ void servo_FactoryReset(ServoXM4340 *servo, uint8_t resetvalue)
  *     @arg BaudRate_4M: Baud Rate 4M Mbps
  *     @arg BaudRate_4p5M: Baud Rate 4.5M Mbps
  * @retval None
+ * @note    The servo return status packet in original baudrate
  */
 void setServo_BaudRate(ServoXM4340 *servo, uint8_t baud)
 {
@@ -77,9 +97,25 @@ void setServo_BaudRate(ServoXM4340 *servo, uint8_t baud)
     params_arr[1] = BaudRate_ADDR_HB;
     params_arr[2] = baud;
 
-    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+    // TX turn on
+    HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
+
+    sendServoCommand(servo->huart, servo->ID, INSTRUCTION_WRITE, 3, params_arr);
+
+    // RX turn on
+    HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_RESET);
+
+    getServoResponse(servo, SIZE_STATUS_PACKET);
+    checkServoResponse(servo);
 }
 
+/**
+ * @brief   Set the servo ID parameter.
+ * @param   servo Pointer to ServoXM430 structure
+ * @param   id Baudrate value
+ * @retval  None
+ * @note    The servo return status packet in original ID value
+ */
 void setServo_ID(ServoXM4340 *servo, uint8_t id)
 {
     // parameters calculated and send the instruction
@@ -88,17 +124,15 @@ void setServo_ID(ServoXM4340 *servo, uint8_t id)
     params_arr[1] = ID_ADDR_HB;
     params_arr[2] = id;
 
-    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
-}
-
-void setBroadcast_ID(ServoXM4340 *servo, uint8_t id)
-{
+    // TX turn on
     HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
-    uint8_t params_arr[3] = {0};
-    params_arr[0] = ID_ADDR_LB;
-    params_arr[1] = ID_ADDR_HB;
-    params_arr[2] = id;
-    sendServoCommand(servo->huart, ID_broadcast, INSTRUCTION_WRITE, 3, params_arr);
+
+    sendServoCommand(servo->huart, servo->ID, INSTRUCTION_WRITE, 3, params_arr);
+
+    // RX turn on
+    HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_RESET);
+
+    getServoResponse(servo, SIZE_STATUS_PACKET);
 }
 
 /**
@@ -288,6 +322,72 @@ void setServo_DriveMode(ServoXM4340 *servo, uint8_t conf)
 
     dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
 }
+// ServoXM4340*  myServo[3];
+
+HAL_StatusTypeDef setServo_SyncWrite(ServoXM4340 *servoArray, int motorCount, uint8_t addrSize, uint32_t *dataArray, uint32_t addrLB, uint32_t addrHB)
+{
+
+    // Check all motor have the same UART
+
+    // Set parameter
+    uint8_t params_arr[4 + (1 + SERVO_MAX_ADDR_SIZE) * SERVO_MAX_COUNT] = {0};
+    params_arr[0] = addrLB;
+    params_arr[1] = addrHB;
+    params_arr[2] = addrSize;
+    params_arr[3] = 0;
+    for (int i = 0; i < motorCount; i++)
+    {
+        int start = 4 + (1 + addrSize) * i;
+        params_arr[start] = servoArray[0].ID;
+        for (uint8_t j = 1; j <= addrSize; j++)
+        {
+            params_arr[start + j] = (uint8_t)(dataArray[i] >> (j - 1) * 8) & 0x00ff;
+        }
+    }
+
+    bool received[motorCount];
+    int state[motorCount];
+    for (int i = 0; i < motorCount; i++)
+    {
+        received[i] = true;
+        state[i] = SERVO_ONLINE;
+    }
+
+    do
+    {
+        // TX turn on
+        HAL_GPIO_WritePin(servoArray[0].ctrlPort, servoArray[0].ctrlPin, GPIO_PIN_SET);
+
+        sendServoCommand(servoArray[0].huart, ID_broadcast, INSTRUCTION_SYNC_WRITE, 4 + (1 + addrSize) * motorCount, params_arr);
+
+        // RX turn on
+        HAL_GPIO_WritePin(servoArray[0].ctrlPort, servoArray[0].ctrlPin, GPIO_PIN_RESET);
+
+        for (int i = 0; i < motorCount; i++)
+        {
+            // wait for receiving completed
+            getServoResponse(&servoArray[i], SIZE_STATUS_PACKET);
+
+            state[i] = servoArray[i].state;
+            if (state[i] != SERVO_OFFLINE)
+            {
+                received[i] = checkServoResponse(&servoArray[i]);
+            }
+        }
+    } while (allTrue(received, motorCount));
+
+    if (allTrue(state, motorCount))
+        return HAL_OK;
+    else
+        return HAL_ERROR;
+}
+
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 
 /**
  * @brief   Get the servo Baudrate value.
@@ -333,25 +433,6 @@ int getServo_BaudRate(ServoXM4340 *servo)
         break;
     }
     return 0;
-}
-
-/**
- * @brief   Get the servo ID value.
- * @param   servo ServoXM430 structure
- * @retval  ID value
- */
-uint8_t getServo_ID(ServoXM4340 *servo)
-{
-    // parameters calculated and send the instruction
-    uint8_t params_arr[4] = {0};
-    params_arr[0] = ID_ADDR_LB;
-    params_arr[1] = ID_ADDR_HB;
-    params_arr[2] = ID_ByteSize;
-    params_arr[3] = 0x00;
-
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + ID_ByteSize, params_arr, sizeof(params_arr));
-
-    return servo->Response.params[0];
 }
 
 uint8_t getServo_DriveMode(ServoXM4340 *servo)
@@ -557,7 +638,7 @@ void dualTransferServo(ServoXM4340 *servo, int instructionType, int packet_size,
         // RX turn on
         HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_RESET);
 
-        // DMA turn on and wait for receiving completed
+        // wait for receiving completed
         getServoResponse(servo, packet_size);
         if (servo->state == SERVO_OFFLINE)
             break;
@@ -598,6 +679,7 @@ uint16_t sendServoCommand(UART_HandleTypeDef *huart, uint8_t servoId, uint8_t co
     disable_all_IT();
     HAL_UART_Transmit(huart, crc, 2, 0xFFFF);
     enable_all_IT();
+    HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13);
 
     return crc_val;
 }
@@ -606,7 +688,7 @@ void getServoResponse(ServoXM4340 *servo, uint16_t RxLen)
 {
     servo->Response.RxFinished = false;
     clear_RX_buffer(servo);
-    // Rx DMA start , data received and processed in Uart_Callback function
+    // data received and processed in Uart_Callback function
     HAL_UART_Receive_IT(servo->huart, servo->Response.RxBuffer, RxLen);
 
     uint32_t tickstart = HAL_GetTick();
@@ -630,6 +712,16 @@ void clear_RX_buffer(ServoXM4340 *servo)
     {
         servo->Response.RxBuffer[i] = 0;
     }
+}
+
+bool allTrue(bool arr[], int len)
+{
+    for (int i = 0; i < len; i++)
+    {
+        if (arr[i] == 0 || arr[i] == SERVO_OFFLINE)
+            return false;
+    }
+    return true;
 }
 
 bool checkServoResponse(ServoXM4340 *servo)

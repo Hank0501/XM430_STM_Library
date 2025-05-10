@@ -20,5 +20,4 @@
 
 - Syncread, Syncwrite..., may write a new dualTransferServo for sync-case, original one for one servo situation.
 - the non-blocking version
-- fuck
 -

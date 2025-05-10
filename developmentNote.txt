@@ -1,0 +1,42 @@
+SyncWrite 要做的事
+
+馬達structure array
+data array
+馬達數量
+使用UART
+
+多科馬達步驟
+/////////////////////////////////////////////////////
+
+
+發送
+    檢查是否都同UART
+    設參數
+    打開傳輸PORT
+    直接送一個封包
+        使用sendServoCommand -> OK
+        servoID 改用 setBroadcast_ID
+        commandBYTE使用 SyncWrite
+        長度同樣要算
+
+回傳
+    打開接收PORT
+    for 迴圈 次數為馬達個數
+        開始接收，迴圈等待直到OK
+        判斷RXbuffer 裡面的ID，辨識哪個封包是誰的
+        把封包給那個Servo的Response
+    迴圈結束，對每個Response的參數值做處理
+    處理完後回傳
+
+
+
+
+單科馬達步驟
+//////////////////////////////////////////////////////
+
+設參數
+打開傳輸PORT
+發送封包
+打開接收PORT
+開始接收，迴圈等待直到OK
+去回傳的封包拿自己要的東西
