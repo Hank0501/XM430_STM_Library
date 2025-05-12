@@ -506,11 +506,11 @@ uint16_t getServo_CurrentLimit(ServoXM4340 *servo)
 }
 
 /**
- * @brief  Get the servo Present Position parameter value.
+ * @brief  Get the servo Present Position value.
  * @param  servo ServoXM430 structure
- * @retval Present Position parameter value, the unit of the value is approximately 0.88 deg, see manual.
+ * @retval Present Position value deg unit
  */
-int32_t getServo_PresentPosition(ServoXM4340 *servo)
+float getServo_PresentPosition(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -528,7 +528,9 @@ int32_t getServo_PresentPosition(ServoXM4340 *servo)
     pos |= servo->Response.params[2] << 16;
     pos |= servo->Response.params[3] << 24;
 
-    return pos;
+    servo->Position = pos;
+
+    return (float)pos * 360.0 / 4096.0;
 }
 
 /**
@@ -594,6 +596,7 @@ uint16_t getServo_ProfileVelocity(ServoXM4340 *servo)
 /*===================== Function to "Syncwrite" multiple Servo parameter ==========================*/
 /*=================================================================================================*/
 /*=================================================================================================*/
+
 /**
  * @brief  Set the servo Goal position parameter at the same time.
  * @param  servoList An array of ServoXM4340 structures
@@ -621,11 +624,36 @@ void syncWrite_GoalPosition(ServoXM4340 *servoList, int servoCount, const float 
 /*=================================================================================================*/
 /*=================================================================================================*/
 
+/**
+ * @brief  Get the servo Present Position parameter value at the same time.
+ * @param  servoList An array of ServoXM4340 structure
+ * @param  servoCount Size of servoArray,which represents the number of servo
+ * @param  posList An array of position buffer to save the present position of each servo
+ * @retval None
+ */
+void syncRead_PresentPosition(ServoXM4340 *servoList, int servoCount, float *posList)
+{
+    getServo_SyncRead(servoList, servoCount, GoalPosition_ADDR_LB, GoalPosition_ADDR_HB, GoalPosition_ByteSize);
+    for (int i = 0; i < servoCount; i++)
+    {
+        int32_t pos = 0;
+        pos |= servoList[i].Response.params[0];
+        pos |= servoList[i].Response.params[1] << 8;
+        pos |= servoList[i].Response.params[2] << 16;
+        pos |= servoList[i].Response.params[3] << 24;
+
+        servoList[i].Position = pos;
+
+        posList[i] = (float)pos * 360.0 / 4096.0;
+    }
+}
+
 /*=================================================================================================*/
 /*=================================================================================================*/
 /*===================== Function that should not  be called externally: ===========================*/
 /*=================================================================================================*/
 /*=================================================================================================*/
+
 /**
  * @brief  Set the servo parameter at the same time.
  * @param  servoArray An array of ServoXM4340 structures
