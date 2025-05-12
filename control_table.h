@@ -14,6 +14,7 @@
 // XM4340 control table
 #define GoalPosition_ADDR_LB 0x74
 #define GoalPosition_ADDR_HB 0x00
+#define GoalPosition_ByteSize 4
 
 #define OperatingMode_ADDR_LB 0x0b
 #define OperatingMode_ADDR_HB 0x00

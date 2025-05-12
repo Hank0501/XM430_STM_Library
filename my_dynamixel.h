@@ -21,14 +21,15 @@
 
 // maimum number of parameter used
 #define SERVO_MAX_PARAMS 10
-#define SERVO_MAX_TxBYTE 100 //  CRC bytes excluded , 8(Fixed bytes, Header ~ Inst) + 4 + (1 + SERVO_MAX_ADDR_SIZE) * SERVO_MAX_COUNT
-#define SERVO_MAX_RxBYTE 25  //  The entire Rxd Buffer size
+#define SERVO_MAX_TX_BUFFER_SIZE 100 //  CRC bytes excluded , 8(Fixed bytes, Header ~ Inst) + 4 + (1 + SERVO_MAX_ADDR_SIZE) * SERVO_MAX_COUNT
+#define SERVO_MAX_RX_BUFFER_SIZE 25  //  The entire Rxd Buffer size
 #define SERVO_MAX_COUNT 15
 #define SERVO_MAX_ADDR_SIZE 4
 
 // used for response packet prossessing
 #define INDEX_SATUS_PACKET_ID 4
-#define INDEX_SATUS_PACKET_LEN 5
+#define INDEX_SATUS_PACKET_LEN_L 5
+#define INDEX_SATUS_PACKET_LEN_H 6
 #define INDEX_SATUS_PACKET_ERR 8
 
 // the basic size of status packet
@@ -43,9 +44,11 @@
 #include "stm32f4xx_hal.h"
 #include "control_table.h"
 
+extern volatile uint8_t DXL_RxBuffer[SERVO_MAX_RX_BUFFER_SIZE];
+
 typedef struct ServoResponse
 {
-    uint8_t RxBuffer[SERVO_MAX_RxBYTE];
+    uint8_t RxBuffer[SERVO_MAX_RX_BUFFER_SIZE];
     uint8_t id;
     uint8_t length;
     uint8_t error;
@@ -82,9 +85,11 @@ typedef struct ServoXM4340
 
 } ServoXM4340;
 
-void setServoResponse_RxFinished(ServoXM4340 *servo, bool val);
+void DXL_SetServoResponse_RxFinished(ServoXM4340 *servo, bool val);
 
-uint8_t getRespRxBuffer_ID(ServoXM4340 *servo);
+void DXL_AssignRxBufferToServo(ServoXM4340 *servo);
+
+uint8_t DXL_GetRxBufferID(void);
 
 void servo_FactoryReset(ServoXM4340 *servo, uint8_t packetID, uint8_t resetvalue);
 
@@ -108,8 +113,6 @@ void setServo_ProfileVelocity(ServoXM4340 *servo, uint16_t maxVel);
 
 void setServo_DriveMode(ServoXM4340 *servo, uint8_t conf);
 
-HAL_StatusTypeDef setServo_SyncWrite(ServoXM4340 *servoArray, int motorCount, uint8_t addrSize, uint32_t *dataArray, uint32_t addrLB, uint32_t addrHB);
-
 int getServo_BaudRate(ServoXM4340 *servo);
 
 uint8_t getServo_OperatingMode(ServoXM4340 *servo);
@@ -130,19 +133,26 @@ uint16_t getServo_ProfileVelocity(ServoXM4340 *servo);
 
 uint8_t getServo_DriveMode(ServoXM4340 *servo);
 
-// void getServo_SyncRead();
+void syncWrite_GoalPosition(ServoXM4340 *servoList, int servoCount, const float *angleList);
+
 //------------------------------------------------------------------------------
 //------------------------------------------------------------------------------
 // these shouldn't need to be called externally:
 ///
+
+void setServo_SyncWrite(ServoXM4340 *servoArray, int servoCount, uint8_t addrLB, uint8_t addrHB, uint8_t addrSize, uint32_t *dataArray);
+
+HAL_StatusTypeDef getServo_SyncRead(ServoXM4340 *servoArray, int servoCount, uint8_t addrLB, uint8_t addrHB, uint8_t addrSize);
+
 void dualTransferServo(ServoXM4340 *servo, int instructionType, int packet_size, uint8_t *params_arr, int param_size);
+
 uint16_t sendServoCommand(UART_HandleTypeDef *huart, uint8_t servoId, uint8_t commandByte, uint8_t numParams, uint8_t *params);
 
 void getServoResponse(ServoXM4340 *servo, uint16_t RxLen);
 
 void clear_RX_buffer(ServoXM4340 *servo);
 
-bool allTrue(bool arr[], int len);
+bool allTrue(int arr[], int len);
 
 bool checkServoResponse(ServoXM4340 *servo);
 
