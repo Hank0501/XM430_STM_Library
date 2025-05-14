@@ -59,23 +59,20 @@ typedef struct ServoResponse
 
 typedef struct ServoXM4340
 {
-    // Servo Control Table
-    // int MaxPos;
-    // int MinPos;
-    // int MaxCurrent;
-
     int state;
 
     int BaudRate;
-    uint16_t GoalCurrent;
-    uint16_t CurrentLimit;
-    int32_t Position;
-    int16_t Current;
     uint8_t ID;
-    uint8_t ReturnDelay;
-    uint8_t TorqueENA;
     uint8_t OperatingMode;
     uint8_t DriveMode;
+    uint8_t ReturnDelay;
+    uint8_t TorqueENA;
+    int32_t PresentPosition;
+    int16_t PresentCurrent;
+    int16_t GoalCurrent;
+    uint16_t CurrentLimit;
+    uint32_t ProfileAcceleration;
+    uint32_t ProfileVelocity;
 
     // Communication used
     UART_HandleTypeDef *huart;
@@ -137,25 +134,25 @@ void setServo_DriveMode(ServoXM4340 *servo, uint8_t conf);
 /*=================================================================================================*/
 /*=================================================================================================*/
 
-int getServo_BaudRate(ServoXM4340 *servo);
+void getServo_BaudRate(ServoXM4340 *servo);
 
-uint8_t getServo_OperatingMode(ServoXM4340 *servo);
+void getServo_OperatingMode(ServoXM4340 *servo);
 
-uint8_t getServo_TorqueENA(ServoXM4340 *servo);
+void getServo_TorqueENA(ServoXM4340 *servo);
 
-int16_t getServo_PresentCurrent(ServoXM4340 *servo);
+float getServo_PresentCurrent(ServoXM4340 *servo);
 
-int16_t getServo_GoalCurrent(ServoXM4340 *servo);
+void getServo_GoalCurrent(ServoXM4340 *servo);
 
-uint16_t getServo_CurrentLimit(ServoXM4340 *servo);
+void getServo_CurrentLimit(ServoXM4340 *servo);
 
 float getServo_PresentPosition(ServoXM4340 *servo);
 
-uint16_t getServo_ProfileAcceleration(ServoXM4340 *servo);
+void getServo_ProfileAcceleration(ServoXM4340 *servo);
 
-uint16_t getServo_ProfileVelocity(ServoXM4340 *servo);
+void getServo_ProfileVelocity(ServoXM4340 *servo);
 
-uint8_t getServo_DriveMode(ServoXM4340 *servo);
+void getServo_DriveMode(ServoXM4340 *servo);
 
 /*=================================================================================================*/
 /*=================================================================================================*/
@@ -165,6 +162,8 @@ uint8_t getServo_DriveMode(ServoXM4340 *servo);
 
 void syncWrite_GoalPosition(ServoXM4340 *servoList, int servoCount, const float *angleList);
 
+void syncWrite_GoalCurrent(ServoXM4340 *servoList, int servoCount, const int16_t *currentList);
+
 /*=================================================================================================*/
 /*=================================================================================================*/
 /*===================== Function to "Syncread" multiple Servo parameter ===========================*/
@@ -172,6 +171,8 @@ void syncWrite_GoalPosition(ServoXM4340 *servoList, int servoCount, const float 
 /*=================================================================================================*/
 
 void syncRead_PresentPosition(ServoXM4340 *servoList, int servoCount, float *posList);
+
+void syncRead_PresentCurrent(ServoXM4340 *servoList, int servoCount, float *curList);
 
 /*=================================================================================================*/
 /*=================================================================================================*/

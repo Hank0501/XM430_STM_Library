@@ -363,7 +363,7 @@ void setServo_DriveMode(ServoXM4340 *servo, uint8_t conf)
  * @param  servo ServoXM430 structure
  * @retval  Baudrate value
  */
-int getServo_BaudRate(ServoXM4340 *servo)
+void getServo_BaudRate(ServoXM4340 *servo)
 {
 
     // parameters calculated and send the instruction
@@ -378,33 +378,32 @@ int getServo_BaudRate(ServoXM4340 *servo)
     switch (servo->Response.params[0])
     {
     case BaudRate_57600:
-        return 57600;
+        servo->BaudRate = 57600;
         break;
     case BaudRate_115200:
-        return 115200;
+        servo->BaudRate = 115200;
         break;
     case BaudRate_1M:
-        return 1000000;
+        servo->BaudRate = 1000000;
         break;
     case BaudRate_2M:
-        return 2000000;
+        servo->BaudRate = 2000000;
         break;
     case BaudRate_3M:
-        return 3000000;
+        servo->BaudRate = 3000000;
         break;
     case BaudRate_4M:
-        return 4000000;
+        servo->BaudRate = 4000000;
         break;
     case BaudRate_4p5M:
-        return 4500000;
+        servo->BaudRate = 4500000;
         break;
     default:
         break;
     }
-    return 0;
 }
 
-uint8_t getServo_DriveMode(ServoXM4340 *servo)
+void getServo_DriveMode(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -414,8 +413,7 @@ uint8_t getServo_DriveMode(ServoXM4340 *servo)
     params_arr[3] = 0x00;
 
     dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + DriveMode_ByteSize, params_arr, sizeof(params_arr));
-
-    return servo->Response.params[0];
+    servo->DriveMode = servo->Response.params[0];
 }
 
 /**
@@ -423,7 +421,7 @@ uint8_t getServo_DriveMode(ServoXM4340 *servo)
  * @param  servo ServoXM430 structure
  * @retval  TorqueEnable parameter value, 1 for torque on and 0 for torque off
  */
-uint8_t getServo_TorqueENA(ServoXM4340 *servo)
+void getServo_TorqueENA(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -434,15 +432,15 @@ uint8_t getServo_TorqueENA(ServoXM4340 *servo)
 
     dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + TorqueEnable_ByteSize, params_arr, sizeof(params_arr));
 
-    return servo->Response.params[0];
+    servo->TorqueENA = servo->Response.params[0];
 }
 
 /**
  * @brief  Get the servo PresentCurrent parameter value.
  * @param  servo ServoXM430 structure
- * @retval  Present Current parameter value, the unit of the value is approximately 2.69 mA, see manual.
+ * @retval  Present Current value, in mA
  */
-int16_t getServo_PresentCurrent(ServoXM4340 *servo)
+float getServo_PresentCurrent(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -455,18 +453,22 @@ int16_t getServo_PresentCurrent(ServoXM4340 *servo)
 
     // record the current  of the servo
     int16_t pre_cur = 0;
-    pre_cur |= (int)servo->Response.params[0];
-    pre_cur |= (int)servo->Response.params[1] << 8;
-    return pre_cur;
+    pre_cur |= (int16_t)servo->Response.params[0];
+    pre_cur |= (int16_t)servo->Response.params[1] << 8;
+
+    servo->PresentCurrent = pre_cur;
+
+    return pre_cur * DXL_CUR_RESOLUTION;
 }
 
 /**
- * @brief  Get the servo Goal Current parameter value.
- * @param  servo ServoXM430 structure
- * @retval  Goal Current parameter value, the unit of the value is approximately 2.69 mA, see manual.
- * @
+ * @brief Get the servo Goal Current parameter value.
+ * @param servo ServoXM430 structure
+ * @retval Goal Current parameter value, the unit of the value is approximately 2.69 mA, see manual.
+ *
+ * @note Goal Current value reset to CurrentLimit after CurrentLimit parameter is set.
  */
-int16_t getServo_GoalCurrent(ServoXM4340 *servo)
+void getServo_GoalCurrent(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -478,9 +480,10 @@ int16_t getServo_GoalCurrent(ServoXM4340 *servo)
 
     // record the current  of the servo
     int16_t goal_cur = 0;
-    goal_cur |= (int)servo->Response.params[0];
-    goal_cur |= (int)servo->Response.params[1] << 8;
-    return goal_cur;
+    goal_cur |= (int16_t)servo->Response.params[0];
+    goal_cur |= (int16_t)servo->Response.params[1] << 8;
+
+    servo->GoalCurrent = goal_cur;
 }
 
 /**
@@ -488,7 +491,7 @@ int16_t getServo_GoalCurrent(ServoXM4340 *servo)
  * @param  servo ServoXM430 structure
  * @retval  Current Limit parameter value, the unit of the value is approximately 2.69 mA, see manual.
  */
-uint16_t getServo_CurrentLimit(ServoXM4340 *servo)
+void getServo_CurrentLimit(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -500,9 +503,9 @@ uint16_t getServo_CurrentLimit(ServoXM4340 *servo)
 
     // record the current  of the servo
     uint16_t cur = 0;
-    cur |= (int)servo->Response.params[0];
-    cur |= (int)servo->Response.params[1] << 8;
-    return cur;
+    cur |= (uint16_t)servo->Response.params[0];
+    cur |= (uint16_t)servo->Response.params[1] << 8;
+    servo->CurrentLimit = cur;
 }
 
 /**
@@ -523,14 +526,14 @@ float getServo_PresentPosition(ServoXM4340 *servo)
 
     // record the postion of the servo
     int32_t pos = 0;
-    pos |= servo->Response.params[0];
-    pos |= servo->Response.params[1] << 8;
-    pos |= servo->Response.params[2] << 16;
-    pos |= servo->Response.params[3] << 24;
+    pos |= (uint32_t)servo->Response.params[0];
+    pos |= (uint32_t)servo->Response.params[1] << 8;
+    pos |= (uint32_t)servo->Response.params[2] << 16;
+    pos |= (uint32_t)servo->Response.params[3] << 24;
 
-    servo->Position = pos;
+    servo->PresentPosition = pos;
 
-    return (float)pos * 360.0 / 4096.0;
+    return (float)pos * DXL_POS_RESOLUTION;
 }
 
 /**
@@ -543,7 +546,7 @@ float getServo_PresentPosition(ServoXM4340 *servo)
  * @retval  4   Extended position control mode
  * @retval  16  PWM control mode
  */
-uint8_t getServo_OperatingMode(ServoXM4340 *servo)
+void getServo_OperatingMode(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -554,10 +557,10 @@ uint8_t getServo_OperatingMode(ServoXM4340 *servo)
 
     dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + OperatingMode_ByteSize, params_arr, sizeof(params_arr));
 
-    return servo->Response.params[0];
+    servo->OperatingMode = servo->Response.params[0];
 }
 
-uint16_t getServo_ProfileAcceleration(ServoXM4340 *servo)
+void getServo_ProfileAcceleration(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -567,14 +570,16 @@ uint16_t getServo_ProfileAcceleration(ServoXM4340 *servo)
     params_arr[3] = 0x00;
     dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + ProfileAcceleration_ByteSize, params_arr, sizeof(params_arr));
 
-    // record the current  of the servo
-    uint16_t prof = 0;
-    prof |= servo->Response.params[0];
-    prof |= servo->Response.params[1] << 8;
-    return prof;
+    // record the ProfileAcceleration  of the servo
+    uint32_t prof = 0;
+    prof |= (uint32_t)servo->Response.params[0];
+    prof |= (uint32_t)servo->Response.params[1] << 8;
+    prof |= (uint32_t)servo->Response.params[2] << 16;
+    prof |= (uint32_t)servo->Response.params[3] << 24;
+    servo->ProfileAcceleration = prof;
 }
 
-uint16_t getServo_ProfileVelocity(ServoXM4340 *servo)
+void getServo_ProfileVelocity(ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -584,11 +589,13 @@ uint16_t getServo_ProfileVelocity(ServoXM4340 *servo)
     params_arr[3] = 0x00;
     dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + ProfileVelocity_ByteSize, params_arr, sizeof(params_arr));
 
-    // record the current  of the servo
-    uint16_t prof = 0;
-    prof |= servo->Response.params[0];
-    prof |= servo->Response.params[1] << 8;
-    return prof;
+    // record the ProfileVelocity  of the servo
+    uint32_t prof = 0;
+    prof |= (uint32_t)servo->Response.params[0];
+    prof |= (uint32_t)servo->Response.params[1] << 8;
+    prof |= (uint32_t)servo->Response.params[2] << 16;
+    prof |= (uint32_t)servo->Response.params[3] << 24;
+    servo->ProfileVelocity = prof;
 }
 
 /*=================================================================================================*/
@@ -618,6 +625,18 @@ void syncWrite_GoalPosition(ServoXM4340 *servoList, int servoCount, const float 
     setServo_SyncWrite(servoList, servoCount, GoalPosition_ADDR_LB, GoalPosition_ADDR_HB, GoalPosition_ByteSize, dataArray);
 }
 
+void syncWrite_GoalCurrent(ServoXM4340 *servoList, int servoCount, const int16_t *currentList)
+{
+    uint32_t dataArray[SERVO_MAX_COUNT];
+
+    for (int i = 0; i < servoCount; i++)
+    {
+        currentList[i];
+        dataArray[i] = (uint16_t)currentList[i];
+    }
+    setServo_SyncWrite(servoList, servoCount, GoalCurrent_ADDR_LB, GoalCurrent_ADDR_HB, GoalCurrent_ByteSize, dataArray);
+}
+
 /*=================================================================================================*/
 /*=================================================================================================*/
 /*===================== Function to "Syncread" multiple Servo parameter ===========================*/
@@ -633,7 +652,7 @@ void syncWrite_GoalPosition(ServoXM4340 *servoList, int servoCount, const float 
  */
 void syncRead_PresentPosition(ServoXM4340 *servoList, int servoCount, float *posList)
 {
-    getServo_SyncRead(servoList, servoCount, GoalPosition_ADDR_LB, GoalPosition_ADDR_HB, GoalPosition_ByteSize);
+    getServo_SyncRead(servoList, servoCount, PresentPosition_ADDR_LB, PresentPosition_ADDR_HB, PresentPosition_ByteSize);
     for (int i = 0; i < servoCount; i++)
     {
         int32_t pos = 0;
@@ -642,9 +661,25 @@ void syncRead_PresentPosition(ServoXM4340 *servoList, int servoCount, float *pos
         pos |= servoList[i].Response.params[2] << 16;
         pos |= servoList[i].Response.params[3] << 24;
 
-        servoList[i].Position = pos;
+        servoList[i].PresentPosition = pos;
 
         posList[i] = (float)pos * 360.0 / 4096.0;
+    }
+}
+
+void syncRead_PresentCurrent(ServoXM4340 *servoList, int servoCount, float *curList)
+{
+    getServo_SyncRead(servoList, servoCount, PresentCurrent_ADDR_LB, PresentCurrent_ADDR_HB, PresentCurrent_ByteSize);
+
+    for (int i = 0; i < servoCount; i++)
+    {
+        int16_t pre_cur = 0;
+        pre_cur |= (int)servoList[i].Response.params[0];
+        pre_cur |= (int)servoList[i].Response.params[1] << 8;
+
+        servoList[i].PresentCurrent = pre_cur;
+
+        curList[i] = (float)pre_cur * 2.69;
     }
 }
 

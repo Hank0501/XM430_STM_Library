@@ -11,6 +11,9 @@
 #ifndef CONTROL_TABLE_H
 #define CONTROL_TABLE_H
 
+#define DXL_POS_RESOLUTION 0.0878906 // deg
+#define DXL_CUR_RESOLUTION 2.69      // mA
+
 // XM4340 control table
 #define GoalPosition_ADDR_LB 0x74
 #define GoalPosition_ADDR_HB 0x00
