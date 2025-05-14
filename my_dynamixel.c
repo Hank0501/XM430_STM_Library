@@ -359,9 +359,9 @@ void setServo_DriveMode(ServoXM4340 *servo, uint8_t conf)
 /*=================================================================================================*/
 
 /**
- * @brief  Get the servo Baudrate value.
- * @param  servo ServoXM430 structure
- * @retval  Baudrate value
+ * @brief Get the servo Baudrate value, value of Baudrate variable in "servo" structure will be modified.
+ * @param servo ServoXM430 structure
+ * @retval None
  */
 void getServo_BaudRate(ServoXM4340 *servo)
 {
@@ -417,9 +417,9 @@ void getServo_DriveMode(ServoXM4340 *servo)
 }
 
 /**
- * @brief  Get the servo TorqueEnable parameter value.
- * @param  servo ServoXM430 structure
- * @retval  TorqueEnable parameter value, 1 for torque on and 0 for torque off
+ * @brief Get the servo TorqueEnable parameter value, value of TorqueEnable variable in "servo" structure will be modified.
+ * @param servo ServoXM430 structure
+ * @retval None
  */
 void getServo_TorqueENA(ServoXM4340 *servo)
 {
@@ -436,9 +436,9 @@ void getServo_TorqueENA(ServoXM4340 *servo)
 }
 
 /**
- * @brief  Get the servo PresentCurrent parameter value.
- * @param  servo ServoXM430 structure
- * @retval  Present Current value, in mA
+ * @brief Get the servo PresentCurrent parameter value, value of PresentCurrent variable in "servo" structure will be modified.
+ * @param servo ServoXM430 structure
+ * @retval Present Current value, in mA
  */
 float getServo_PresentCurrent(ServoXM4340 *servo)
 {
@@ -462,11 +462,11 @@ float getServo_PresentCurrent(ServoXM4340 *servo)
 }
 
 /**
- * @brief Get the servo Goal Current parameter value.
+ * @brief Get the servo GoalCurrent parameter value, value of GoalCurrent variable in "servo" structure will be modified.
  * @param servo ServoXM430 structure
- * @retval Goal Current parameter value, the unit of the value is approximately 2.69 mA, see manual.
+ * @retval None
  *
- * @note Goal Current value reset to CurrentLimit after CurrentLimit parameter is set.
+ * @note GoalCurrent value reset to CurrentLimit after CurrentLimit parameter is set.
  */
 void getServo_GoalCurrent(ServoXM4340 *servo)
 {
@@ -487,9 +487,9 @@ void getServo_GoalCurrent(ServoXM4340 *servo)
 }
 
 /**
- * @brief  Get the servo Current Limit parameter value.
+ * @brief  Get the servo CurrentLimit parameter value, value of CurrentLimit variable in "servo" structure will be modified.
  * @param  servo ServoXM430 structure
- * @retval  Current Limit parameter value, the unit of the value is approximately 2.69 mA, see manual.
+ * @retval  None
  */
 void getServo_CurrentLimit(ServoXM4340 *servo)
 {
@@ -509,9 +509,9 @@ void getServo_CurrentLimit(ServoXM4340 *servo)
 }
 
 /**
- * @brief  Get the servo Present Position value.
+ * @brief  Get the servo PresentPosition value, value of PresentPosition variable in "servo" structure will be modified.
  * @param  servo ServoXM430 structure
- * @retval Present Position value deg unit
+ * @retval PresentPosition value in deg unit
  */
 float getServo_PresentPosition(ServoXM4340 *servo)
 {
@@ -537,14 +537,9 @@ float getServo_PresentPosition(ServoXM4340 *servo)
 }
 
 /**
- * @brief  Get the servo Operating Mode parameter value.
+ * @brief  Get the servo OperatingMode parameter value, value of OperatingMode variable in "servo" structure will be modified.
  * @param  servo ServoXM430 structure
- * @retval  OperatingMode parameter value
- * @retval  0   Current control mode
- * @retval  1   Velocity control mode
- * @retval  3   Position control mode
- * @retval  4   Extended position control mode
- * @retval  16  PWM control mode
+ * @retval  None
  */
 void getServo_OperatingMode(ServoXM4340 *servo)
 {
@@ -605,12 +600,12 @@ void getServo_ProfileVelocity(ServoXM4340 *servo)
 /*=================================================================================================*/
 
 /**
- * @brief  Set the servo Goal position parameter at the same time.
+ * @brief  Set the servo GoalPosition parameter at the same time.
  * @param  servoList An array of ServoXM4340 structures
  * @param  servoCount Size of servoArray, which represents the number of servo
  * @param  angleList An array of angle command to write into each servo
  * @retval  None
- * @note  Goal position value has limitation in different operrating mode, see manual.
+ * @note  Goalposition value has limitation in different operrating mode, see manual.
  * @note  Servos don't return status packet for SyncWrite instruction.
  */
 void syncWrite_GoalPosition(ServoXM4340 *servoList, int servoCount, const float *angleList)
@@ -625,6 +620,15 @@ void syncWrite_GoalPosition(ServoXM4340 *servoList, int servoCount, const float 
     setServo_SyncWrite(servoList, servoCount, GoalPosition_ADDR_LB, GoalPosition_ADDR_HB, GoalPosition_ByteSize, dataArray);
 }
 
+/**
+ * @brief  Set the servo GoalCurrent parameter at the same time.
+ * @param  servoList An array of ServoXM4340 structures
+ * @param  servoCount Size of servoArray, which represents the number of servo
+ * @param  currentList An array of current command to write into each servo
+ * @retval  None
+ * @note  GoalCurrent can not be set larger than the CurrentLimit parameter.
+ * @note  Servos don't return status packet for SyncWrite instruction.
+ */
 void syncWrite_GoalCurrent(ServoXM4340 *servoList, int servoCount, const int16_t *currentList)
 {
     uint32_t dataArray[SERVO_MAX_COUNT];
@@ -667,6 +671,13 @@ void syncRead_PresentPosition(ServoXM4340 *servoList, int servoCount, float *pos
     }
 }
 
+/**
+ * @brief  Get the servo PresentCurrent parameter value at the same time.
+ * @param  servoList An array of ServoXM4340 structure
+ * @param  servoCount Size of servoArray,which represents the number of servo
+ * @param  curList An array of current buffer to save the present current of each servo
+ * @retval None
+ */
 void syncRead_PresentCurrent(ServoXM4340 *servoList, int servoCount, float *curList)
 {
     getServo_SyncRead(servoList, servoCount, PresentCurrent_ADDR_LB, PresentCurrent_ADDR_HB, PresentCurrent_ByteSize);
