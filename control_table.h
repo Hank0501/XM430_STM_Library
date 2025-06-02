@@ -13,6 +13,7 @@
 
 #define DXL_POS_RESOLUTION 0.0878906 // deg
 #define DXL_CUR_RESOLUTION 2.69      // mA
+#define DXL_VEL_RESOLUTION 0.229     // rpm
 
 // XM4340 control table
 #define GoalPosition_ADDR_LB 0x74
@@ -46,6 +47,18 @@
 #define CurrentLimit_ADDR_LB 0x26
 #define CurrentLimit_ADDR_HB 0x00
 #define CurrentLimit_ByteSize 2
+
+#define PresentVelocity_ADDR_LB 0x80
+#define PresentVelocity_ADDR_HB 0x00
+#define PresentVelocity_ByteSize 4
+
+#define GoalVelocity_ADDR_LB 0x68
+#define GoalVelocity_ADDR_HB 0x00
+#define GoalVelocity_ByteSize 4
+
+#define VelocityLimit_ADDR_LB 0x2C
+#define VelocityLimit_ADDR_HB 0x00
+#define VelocityLimit_ByteSize 4
 
 #define BaudRate_ADDR_LB 0x08
 #define BaudRate_ADDR_HB 0x00

@@ -67,10 +67,17 @@ typedef struct ServoXM4340
     uint8_t DriveMode;
     uint8_t ReturnDelay;
     uint8_t TorqueENA;
+
     int32_t PresentPosition;
+
     int16_t PresentCurrent;
     int16_t GoalCurrent;
     uint16_t CurrentLimit;
+
+    int32_t PresentVelocity;
+    int32_t GoalVelocity;
+    uint32_t VelocityLimit;
+
     uint32_t ProfileAcceleration;
     uint32_t ProfileVelocity;
 
@@ -116,11 +123,15 @@ void setServo_OperatingMode(ServoXM4340 *servo, uint8_t operatingMode);
 
 void setServo_TorqueENA(ServoXM4340 *servo, uint8_t torque);
 
-void setServo_GoalCurrent(ServoXM4340 *servo, uint16_t current);
+void setServo_GoalCurrent(ServoXM4340 *servo, float current);
 
-void setServo_GoalPosition(ServoXM4340 *servo, const float angle);
+void setServo_GoalPosition(ServoXM4340 *servo, float angle);
 
-void setServo_CurrentLimit(ServoXM4340 *servo, uint16_t current);
+void setServo_GoalVelocity(ServoXM4340 *servo, float velocity);
+
+void setServo_CurrentLimit(ServoXM4340 *servo, float current);
+
+void setServo_VelocityLimit(ServoXM4340 *servo, float velocity);
 
 void setServo_ProfileAcceleration(ServoXM4340 *servo, uint16_t maxAcc);
 
@@ -147,6 +158,12 @@ void getServo_GoalCurrent(ServoXM4340 *servo);
 void getServo_CurrentLimit(ServoXM4340 *servo);
 
 float getServo_PresentPosition(ServoXM4340 *servo);
+
+float getServo_PresentVelocity(ServoXM4340 *servo);
+
+void getServo_GoalVelocity(ServoXM4340 *servo);
+
+void getServo_VelocityLimit(ServoXM4340 *servo);
 
 void getServo_ProfileAcceleration(ServoXM4340 *servo);
 

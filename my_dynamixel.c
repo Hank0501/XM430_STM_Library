@@ -10,6 +10,7 @@
 
 #include "my_dynamixel.h"
 #include "stm32f4xx_hal.h"
+#include <math.h>
 
 volatile uint8_t DXL_RxBuffer[SERVO_MAX_RX_BUFFER_SIZE];
 
@@ -216,15 +217,16 @@ void setServo_TorqueENA(ServoXM4340 *servo, uint8_t torque)
  * @retval  None
  * @note  Goal current value should not exceed Current Limit value
  */
-void setServo_GoalCurrent(ServoXM4340 *servo, uint16_t current)
+void setServo_GoalCurrent(ServoXM4340 *servo, float current)
 {
 
     // parameters calculated and send the instruction
+    int16_t cur = round(current / DXL_CUR_RESOLUTION);
     uint8_t params_arr[4] = {0};
     params_arr[0] = GoalCurrent_ADDR_LB;
     params_arr[1] = GoalCurrent_ADDR_HB;
-    params_arr[2] = (uint8_t)current & 0x00ff;
-    params_arr[3] = (uint8_t)(current >> 8) & (0x00ff);
+    params_arr[2] = (uint8_t)cur & 0x00ff;
+    params_arr[3] = (uint8_t)(cur >> 8) & (0x00ff);
 
     dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
 }
@@ -236,19 +238,33 @@ void setServo_GoalCurrent(ServoXM4340 *servo, uint16_t current)
  * @retval  None
  * @note  Goal position value has limitation in different operrating mode, see manual.
  */
-void setServo_GoalPosition(ServoXM4340 *servo, const float angle)
+void setServo_GoalPosition(ServoXM4340 *servo, float angle)
 {
     // parameters calculated and send the instruction
-    // const float angleResolution = (float)360 / 4096;
-    int32_t temp = angle / 0.08789; // 0.08789 = 360/4096
-    uint32_t angle_cmd = temp;
+    int32_t ang = round(angle / DXL_POS_RESOLUTION);
     uint8_t params_arr[6] = {0};
     params_arr[0] = GoalPosition_ADDR_LB;
     params_arr[1] = GoalPosition_ADDR_HB;
-    params_arr[2] = (uint8_t)angle_cmd & 0x000000ff;
-    params_arr[3] = (uint8_t)(angle_cmd >> 8) & (0x000000ff);
-    params_arr[4] = (uint8_t)(angle_cmd >> 16) & (0x000000ff);
-    params_arr[5] = (uint8_t)(angle_cmd >> 24) & (0x000000ff);
+    params_arr[2] = (uint8_t)ang & 0x000000ff;
+    params_arr[3] = (uint8_t)(ang >> 8) & (0x000000ff);
+    params_arr[4] = (uint8_t)(ang >> 16) & (0x000000ff);
+    params_arr[5] = (uint8_t)(ang >> 24) & (0x000000ff);
+
+    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+}
+
+void setServo_GoalVelocity(ServoXM4340 *servo, float velocity)
+{
+
+    // parameters calculated and send the instructions
+    int32_t vel = round(velocity / DXL_VEL_RESOLUTION);
+    uint8_t params_arr[6] = {0};
+    params_arr[0] = GoalVelocity_ADDR_LB;
+    params_arr[1] = GoalVelocity_ADDR_HB;
+    params_arr[2] = (uint8_t)vel & 0x000000ff;
+    params_arr[3] = (uint8_t)(vel >> 8) & (0x000000ff);
+    params_arr[4] = (uint8_t)(vel >> 16) & (0x000000ff);
+    params_arr[5] = (uint8_t)(vel >> 24) & (0x000000ff);
 
     dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
 }
@@ -260,14 +276,30 @@ void setServo_GoalPosition(ServoXM4340 *servo, const float angle)
  * @retval  None
  * @note  Range of current limit value is 0~1193 for XM430
  */
-void setServo_CurrentLimit(ServoXM4340 *servo, uint16_t current)
+void setServo_CurrentLimit(ServoXM4340 *servo, float current)
 {
     // parameters calculated and send the instruction
+    int16_t cur = round(current / DXL_CUR_RESOLUTION);
     uint8_t params_arr[4] = {0};
     params_arr[0] = CurrentLimit_ADDR_LB;
     params_arr[1] = CurrentLimit_ADDR_HB;
-    params_arr[2] = (uint8_t)current & 0x00ff;
-    params_arr[3] = (uint8_t)(current >> 8) & (0x00ff);
+    params_arr[2] = (uint8_t)cur & 0x00ff;
+    params_arr[3] = (uint8_t)(cur >> 8) & (0x00ff);
+
+    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+}
+
+void setServo_VelocityLimit(ServoXM4340 *servo, float velocity)
+{
+    // parameters calculated and send the instruction
+    int32_t vel = round(velocity / DXL_VEL_RESOLUTION);
+    uint8_t params_arr[6] = {0};
+    params_arr[0] = VelocityLimit_ADDR_LB;
+    params_arr[1] = VelocityLimit_ADDR_HB;
+    params_arr[2] = (uint8_t)vel & 0x000000ff;
+    params_arr[3] = (uint8_t)(vel >> 8) & (0x000000ff);
+    params_arr[4] = (uint8_t)(vel >> 16) & (0x000000ff);
+    params_arr[5] = (uint8_t)(vel >> 24) & (0x000000ff);
 
     dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
 }
@@ -403,19 +435,6 @@ void getServo_BaudRate(ServoXM4340 *servo)
     }
 }
 
-void getServo_DriveMode(ServoXM4340 *servo)
-{
-    // parameters calculated and send the instruction
-    uint8_t params_arr[4] = {0};
-    params_arr[0] = DriveMode_ADDR_LB;
-    params_arr[1] = DriveMode_ADDR_HB;
-    params_arr[2] = DriveMode_ByteSize;
-    params_arr[3] = 0x00;
-
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + DriveMode_ByteSize, params_arr, sizeof(params_arr));
-    servo->DriveMode = servo->Response.params[0];
-}
-
 /**
  * @brief Get the servo TorqueEnable parameter value, value of TorqueEnable variable in "servo" structure will be modified.
  * @param servo ServoXM430 structure
@@ -458,7 +477,7 @@ float getServo_PresentCurrent(ServoXM4340 *servo)
 
     servo->PresentCurrent = pre_cur;
 
-    return pre_cur * DXL_CUR_RESOLUTION;
+    return (float)pre_cur * DXL_CUR_RESOLUTION;
 }
 
 /**
@@ -536,6 +555,71 @@ float getServo_PresentPosition(ServoXM4340 *servo)
     return (float)pos * DXL_POS_RESOLUTION;
 }
 
+float getServo_PresentVelocity(ServoXM4340 *servo)
+{
+    // parameters calculated and send the instruction
+    uint8_t params_arr[4] = {0};
+    params_arr[0] = PresentVelocity_ADDR_LB;
+    params_arr[1] = PresentVelocity_ADDR_HB;
+    params_arr[2] = PresentVelocity_ByteSize;
+    params_arr[3] = 0x00;
+
+    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + PresentVelocity_ByteSize, params_arr, sizeof(params_arr));
+
+    // record the velocity of the servo
+    int32_t vel = 0;
+    vel |= (uint32_t)servo->Response.params[0];
+    vel |= (uint32_t)servo->Response.params[1] << 8;
+    vel |= (uint32_t)servo->Response.params[2] << 16;
+    vel |= (uint32_t)servo->Response.params[3] << 24;
+
+    servo->PresentVelocity = vel;
+
+    return (float)vel * DXL_VEL_RESOLUTION;
+}
+
+void getServo_GoalVelocity(ServoXM4340 *servo)
+{
+    // parameters calculated and send the instruction
+    uint8_t params_arr[4] = {0};
+    params_arr[0] = GoalVelocity_ADDR_LB;
+    params_arr[1] = GoalVelocity_ADDR_HB;
+    params_arr[2] = GoalVelocity_ByteSize;
+    params_arr[3] = 0x00;
+
+    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + GoalVelocity_ByteSize, params_arr, sizeof(params_arr));
+
+    // record the velocity of the servo
+    int32_t vel = 0;
+    vel |= (uint32_t)servo->Response.params[0];
+    vel |= (uint32_t)servo->Response.params[1] << 8;
+    vel |= (uint32_t)servo->Response.params[2] << 16;
+    vel |= (uint32_t)servo->Response.params[3] << 24;
+
+    servo->GoalVelocity = vel;
+}
+
+void getServo_VelocityLimit(ServoXM4340 *servo)
+{
+    // parameters calculated and send the instruction
+    uint8_t params_arr[4] = {0};
+    params_arr[0] = VelocityLimit_ADDR_LB;
+    params_arr[1] = VelocityLimit_ADDR_HB;
+    params_arr[2] = VelocityLimit_ByteSize;
+    params_arr[3] = 0x00;
+
+    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + VelocityLimit_ByteSize, params_arr, sizeof(params_arr));
+
+    // record the velocity of the servo
+    uint32_t vel = 0;
+    vel |= (uint32_t)servo->Response.params[0];
+    vel |= (uint32_t)servo->Response.params[1] << 8;
+    vel |= (uint32_t)servo->Response.params[2] << 16;
+    vel |= (uint32_t)servo->Response.params[3] << 24;
+
+    servo->VelocityLimit = vel;
+}
+
 /**
  * @brief  Get the servo OperatingMode parameter value, value of OperatingMode variable in "servo" structure will be modified.
  * @param  servo ServoXM430 structure
@@ -591,6 +675,19 @@ void getServo_ProfileVelocity(ServoXM4340 *servo)
     prof |= (uint32_t)servo->Response.params[2] << 16;
     prof |= (uint32_t)servo->Response.params[3] << 24;
     servo->ProfileVelocity = prof;
+}
+
+void getServo_DriveMode(ServoXM4340 *servo)
+{
+    // parameters calculated and send the instruction
+    uint8_t params_arr[4] = {0};
+    params_arr[0] = DriveMode_ADDR_LB;
+    params_arr[1] = DriveMode_ADDR_HB;
+    params_arr[2] = DriveMode_ByteSize;
+    params_arr[3] = 0x00;
+
+    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + DriveMode_ByteSize, params_arr, sizeof(params_arr));
+    servo->DriveMode = servo->Response.params[0];
 }
 
 /*=================================================================================================*/
@@ -855,9 +952,11 @@ uint16_t sendServoCommand(UART_HandleTypeDef *huart, uint8_t servoId, uint8_t co
 
     // Data transmitting
     /*------------------------------------------------------------------------*/
-    HAL_UART_Transmit(huart, TxdPacket, 8 + numParams, 0xFFFF);
+    // HAL_UART_Transmit(huart, TxdPacket, 8 + numParams, 0xFFFF);
+    HAL_UART_Transmit_IT(huart, TxdPacket, 8 + numParams);
     disable_all_IT();
-    HAL_UART_Transmit(huart, crc, 2, 0xFFFF);
+    // HAL_UART_Transmit(huart, crc, 2, 0xFFFF);
+    HAL_UART_Transmit_IT(huart, crc, 2);
     enable_all_IT();
 
     return crc_val;

@@ -20,4 +20,27 @@
 
 - Syncread, Syncwrite..., may write a new dualTransferServo for sync-case, original one for one servo situation.
 - the non-blocking version
--
+- SyncReadID
+- DMA version is still needed!!!!!
+
+# ! Attention !
+
+> Below are some important detail to use the motor, which are not recorded in the XM430-W350 Manual.
+
+1. The GoalXXXX parameter (_ex: GoalCurrent, GoalVelocity_) will be reset to the corresponding limit value after setting the XXXXLimit parameter (_ex: CurrentLimit, VelocityLimit_)
+2. The GoalXXXX parameter can't be written when the motor is in corresponding mode but the TorqueEnable parameter is off
+   > ex : If the motor is now in Velocity control mode.
+   >
+   > > This will not work :
+   > >
+   > > 1. the TorqueEnable parameter is originally off
+   > > 2. set the GoalVelocity parameter
+   > > 3. set the TorqueEnable parameter on
+   > > 4. the GoalVelocity parameter is not written
+   >
+   > > This will work :
+   > >
+   > > 1. the TorqueEnable parameter is originally off
+   > > 2. set the TorqueEnable parameter on
+   > > 3. set the GoalVelocity parameter
+   > > 4. the GoalVelocity parameter has been written
