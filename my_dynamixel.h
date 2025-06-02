@@ -45,6 +45,8 @@
 #include "control_table.h"
 
 extern volatile uint8_t DXL_RxBuffer[SERVO_MAX_RX_BUFFER_SIZE];
+extern volatile uint8_t DXL_TxBuffer[SERVO_MAX_TX_BUFFER_SIZE];
+extern volatile bool TxFinished;
 
 typedef struct ServoResponse
 {
@@ -96,6 +98,8 @@ typedef struct ServoXM4340
 /*=================================================================================================*/
 
 void DXL_SetServoResponse_RxFinished(ServoXM4340 *servo, bool val);
+
+void DXL_SetTxFinished(bool val);
 
 void DXL_AssignRxBufferToServo(ServoXM4340 *servo);
 
@@ -208,6 +212,8 @@ uint16_t sendServoCommand(UART_HandleTypeDef *huart, uint8_t servoId, uint8_t co
 void getServoResponse(ServoXM4340 *servo, uint16_t RxLen);
 
 void clear_RX_buffer(ServoXM4340 *servo);
+
+void clear_TX_buffer(void);
 
 bool allTrue(int arr[], int len);
 

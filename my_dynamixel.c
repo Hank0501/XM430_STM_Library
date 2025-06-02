@@ -13,6 +13,8 @@
 #include <math.h>
 
 volatile uint8_t DXL_RxBuffer[SERVO_MAX_RX_BUFFER_SIZE];
+volatile uint8_t DXL_TxBuffer[SERVO_MAX_TX_BUFFER_SIZE];
+volatile bool TxFinished;
 
 /*=================================================================================================*/
 /*=================================================================================================*/
@@ -31,6 +33,11 @@ volatile uint8_t DXL_RxBuffer[SERVO_MAX_RX_BUFFER_SIZE];
 void DXL_SetServoResponse_RxFinished(ServoXM4340 *servo, bool val)
 {
     servo->Response.RxFinished = val;
+}
+
+void DXL_SetTxFinished(bool val)
+{
+    TxFinished = val;
 }
 
 void DXL_AssignRxBufferToServo(ServoXM4340 *servo)
@@ -77,6 +84,11 @@ void servo_FactoryReset(ServoXM4340 *servo, uint8_t packetID, uint8_t resetvalue
 
     sendServoCommand(servo->huart, packetID, INSTRUCTION_FactoryReset, 1, params_arr);
 
+    while (!TxFinished)
+    {
+        // wait until transmitting finished;
+    };
+
     // RX turn on
     HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_RESET);
 
@@ -94,7 +106,7 @@ void servo_FactoryReset(ServoXM4340 *servo, uint8_t packetID, uint8_t resetvalue
     }
     else
     {
-        HAL_UART_Receive_IT(servo->huart, servo->Response.RxBuffer, SIZE_STATUS_PACKET);
+        HAL_UART_Receive(servo->huart, servo->Response.RxBuffer, SIZE_STATUS_PACKET, 0xffff);
     }
 }
 
@@ -132,6 +144,11 @@ void setServo_BaudRate(ServoXM4340 *servo, uint8_t baud)
 
     sendServoCommand(servo->huart, servo->ID, INSTRUCTION_WRITE, 3, params_arr);
 
+    while (!TxFinished)
+    {
+        // wait until transmitting finished;
+    };
+
     // RX turn on
     HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_RESET);
 
@@ -158,6 +175,11 @@ void setServo_ID(ServoXM4340 *servo, uint8_t id)
     HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
 
     sendServoCommand(servo->huart, servo->ID, INSTRUCTION_WRITE, 3, params_arr);
+
+    while (!TxFinished)
+    {
+        // wait until transmitting finished;
+    };
 
     // RX turn on
     HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_RESET);
@@ -876,6 +898,11 @@ HAL_StatusTypeDef getServo_SyncRead(ServoXM4340 *servoArray, int servoCount, uin
 
         sendServoCommand(servoArray[0].huart, ID_broadcast, INSTRUCTION_SYNC_READ, 4 + servoCount, params_arr);
 
+        while (!TxFinished)
+        {
+            // wait until transmitting finished;
+        };
+
         // RX turn on
         HAL_GPIO_WritePin(servoArray[0].ctrlPort, servoArray[0].ctrlPin, GPIO_PIN_RESET);
 
@@ -910,7 +937,13 @@ void dualTransferServo(ServoXM4340 *servo, int instructionType, int packet_size,
         // TX turn on
         HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
 
+        TxFinished = false;
         sendServoCommand(servo->huart, servo->ID, instructionType, param_size, params_arr);
+
+        while (!TxFinished)
+        {
+            // wait until transmitting finished;
+        };
 
         // RX turn on
         HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_RESET);
@@ -926,38 +959,33 @@ void dualTransferServo(ServoXM4340 *servo, int instructionType, int packet_size,
 uint16_t sendServoCommand(UART_HandleTypeDef *huart, uint8_t servoId, uint8_t commandByte, uint8_t numParams, uint8_t *params)
 {
 
-    uint8_t TxdPacket[SERVO_MAX_TX_BUFFER_SIZE];
-    uint8_t crc[2] = {0};
+    // uint8_t crc[2] = {0};
+    clear_TX_buffer();
 
     // assign byte value to packet
     /*------------------------------------------------------------------------*/
-    TxdPacket[0] = 0xff;                   // header1
-    TxdPacket[1] = 0xff;                   // header2
-    TxdPacket[2] = 0xfd;                   // header3
-    TxdPacket[3] = 0x00;                   // reserved
-    TxdPacket[4] = (uint8_t)servoId;       // ID
-    TxdPacket[5] = (uint8_t)numParams + 3; // packet length(low byte) = byte sizeof  instruction(1) + parameter +CRC(2)
-    TxdPacket[6] = 0x00;                   // packet length(high byte), because numParams set to be uint8_t
-    TxdPacket[7] = (uint8_t)commandByte;   // instruction, ex:Ping, Resd, Write...
+    DXL_TxBuffer[0] = 0xff;                   // header1
+    DXL_TxBuffer[1] = 0xff;                   // header2
+    DXL_TxBuffer[2] = 0xfd;                   // header3
+    DXL_TxBuffer[3] = 0x00;                   // reserved
+    DXL_TxBuffer[4] = (uint8_t)servoId;       // ID
+    DXL_TxBuffer[5] = (uint8_t)numParams + 3; // packet length(low byte) = byte sizeof  instruction(1) + parameter +CRC(2)
+    DXL_TxBuffer[6] = 0x00;                   // packet length(high byte), because numParams set to be uint8_t
+    DXL_TxBuffer[7] = (uint8_t)commandByte;   // instruction, ex:Ping, Resd, Write...
     for (uint8_t i = 0; i < numParams; i++)
     {
-        TxdPacket[8 + i] = (uint8_t)params[i];
+        DXL_TxBuffer[8 + i] = (uint8_t)params[i];
     }
 
     // CRC calculation
     /*------------------------------------------------------------------------*/
-    uint16_t crc_val = updateCRC(0, TxdPacket, TxdPacket[5] + 5);
-    crc[0] = (uint8_t)crc_val & 0x00ff;          // CRC low byte
-    crc[1] = (uint8_t)(crc_val >> 8) & (0x00ff); // CRC high byte
+    uint16_t crc_val = updateCRC(0, DXL_TxBuffer, DXL_TxBuffer[5] + 5);
+    DXL_TxBuffer[8 + numParams] = (uint8_t)crc_val & 0x00ff;              // CRC lower byte
+    DXL_TxBuffer[8 + numParams + 1] = (uint8_t)(crc_val >> 8) & (0x00ff); // CRC higher byte
 
     // Data transmitting
     /*------------------------------------------------------------------------*/
-    // HAL_UART_Transmit(huart, TxdPacket, 8 + numParams, 0xFFFF);
-    HAL_UART_Transmit_IT(huart, TxdPacket, 8 + numParams);
-    disable_all_IT();
-    // HAL_UART_Transmit(huart, crc, 2, 0xFFFF);
-    HAL_UART_Transmit_IT(huart, crc, 2);
-    enable_all_IT();
+    HAL_UART_Transmit_DMA(huart, DXL_TxBuffer, 8 + numParams + 2);
 
     return crc_val;
 }
@@ -968,6 +996,7 @@ void getServoResponse(ServoXM4340 *servo, uint16_t RxLen)
     clear_RX_buffer(servo);
     // data received and processed in Uart_Callback function
     HAL_UART_Receive_IT(servo->huart, DXL_RxBuffer, RxLen);
+    HAL_UART_Receive_DMA(servo->huart, DXL_RxBuffer, RxLen);
 
     uint32_t tickstart = HAL_GetTick();
 
@@ -990,6 +1019,14 @@ void clear_RX_buffer(ServoXM4340 *servo)
     {
         servo->Response.RxBuffer[i] = 0;
         DXL_RxBuffer[i] = 0;
+    }
+}
+
+void clear_TX_buffer(void)
+{
+    for (int i = 0; i < SERVO_MAX_TX_BUFFER_SIZE; i++)
+    {
+        DXL_TxBuffer[i] = 0;
     }
 }
 
