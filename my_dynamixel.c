@@ -940,9 +940,15 @@ void dualTransferServo(ServoXM4340 *servo, int instructionType, int packet_size,
         TxFinished = false;
         sendServoCommand(servo->huart, servo->ID, instructionType, param_size, params_arr);
 
+        uint32_t tickstart = HAL_GetTick();
         while (!TxFinished)
         {
             // wait until transmitting finished;
+            if ((HAL_GetTick() - tickstart) > 1500)
+            {
+                servo->state = SERVO_OFFLINE;
+                break; // break while
+            }
         };
 
         // RX turn on
@@ -995,7 +1001,6 @@ void getServoResponse(ServoXM4340 *servo, uint16_t RxLen)
     servo->Response.RxFinished = false;
     clear_RX_buffer(servo);
     // data received and processed in Uart_Callback function
-    HAL_UART_Receive_IT(servo->huart, DXL_RxBuffer, RxLen);
     HAL_UART_Receive_DMA(servo->huart, DXL_RxBuffer, RxLen);
 
     uint32_t tickstart = HAL_GetTick();
