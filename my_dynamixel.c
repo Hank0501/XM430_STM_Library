@@ -30,7 +30,7 @@ volatile bool TxFinished;
  *      @arg  false: data received incompleted
  * @retval  None
  */
-void DXL_SetServoResponse_RxFinished(ServoXM4340 *servo, bool val)
+void DXL_SetServoResponse_RxFinished(volatile ServoXM4340 *servo, bool val)
 {
     servo->Response.RxFinished = val;
 }
@@ -40,7 +40,7 @@ void DXL_SetTxFinished(bool val)
     TxFinished = val;
 }
 
-void DXL_AssignRxBufferToServo(ServoXM4340 *servo)
+void DXL_AssignRxBufferToServo(volatile ServoXM4340 *servo)
 {
 
     for (int i = 0; i < servo->Response.RxBuffer[INDEX_SATUS_PACKET_LEN_L] + 7; i++)
@@ -72,7 +72,7 @@ uint8_t DXL_GetRxBufferID(void)
  * @note  When the Packet ID is the Broadcast ID 0xFE and the configured Option is Reset All,
  *        the Factory Reset Instruction(0x06) will NOT be executed.
  */
-void servo_FactoryReset(ServoXM4340 *servo, uint8_t packetID, uint8_t resetvalue)
+void servo_FactoryReset(volatile ServoXM4340 *servo, uint8_t packetID, uint8_t resetvalue)
 {
 
     // parameters calculated and send the instruction
@@ -131,7 +131,7 @@ void servo_FactoryReset(ServoXM4340 *servo, uint8_t packetID, uint8_t resetvalue
  * @retval  None
  * @note  The servo return status packet in original baudrate
  */
-void setServo_BaudRate(ServoXM4340 *servo, uint8_t baud)
+void setServo_BaudRate(volatile ServoXM4340 *servo, uint8_t baud)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[3] = {0};
@@ -163,7 +163,7 @@ void setServo_BaudRate(ServoXM4340 *servo, uint8_t baud)
  * @retval  None
  * @note  The servo return status packet in original ID value
  */
-void setServo_ID(ServoXM4340 *servo, uint8_t id)
+void setServo_ID(volatile ServoXM4340 *servo, uint8_t id)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[3] = {0};
@@ -199,7 +199,7 @@ void setServo_ID(ServoXM4340 *servo, uint8_t id)
  *      @arg  PWM_CtrlMode: PWm control mode
  * @retval  None
  */
-void setServo_OperatingMode(ServoXM4340 *servo, uint8_t operatingMode)
+void setServo_OperatingMode(volatile ServoXM4340 *servo, uint8_t operatingMode)
 {
 
     // parameters calculated and send the instruction
@@ -220,7 +220,7 @@ void setServo_OperatingMode(ServoXM4340 *servo, uint8_t operatingMode)
  *      @arg  TORQUE_DISABLE: Torque disable
  * @retval  None
  */
-void setServo_TorqueENA(ServoXM4340 *servo, uint8_t torque)
+void setServo_TorqueENA(volatile ServoXM4340 *servo, uint8_t torque)
 {
 
     // parameters calculated and send the instruction
@@ -239,7 +239,7 @@ void setServo_TorqueENA(ServoXM4340 *servo, uint8_t torque)
  * @retval  None
  * @note  Goal current value should not exceed Current Limit value
  */
-void setServo_GoalCurrent(ServoXM4340 *servo, float current)
+void setServo_GoalCurrent(volatile ServoXM4340 *servo, float current)
 {
 
     // parameters calculated and send the instruction
@@ -260,7 +260,7 @@ void setServo_GoalCurrent(ServoXM4340 *servo, float current)
  * @retval  None
  * @note  Goal position value has limitation in different operrating mode, see manual.
  */
-void setServo_GoalPosition(ServoXM4340 *servo, float angle)
+void setServo_GoalPosition(volatile ServoXM4340 *servo, float angle)
 {
     // parameters calculated and send the instruction
     int32_t ang = round(angle / DXL_POS_RESOLUTION);
@@ -275,7 +275,7 @@ void setServo_GoalPosition(ServoXM4340 *servo, float angle)
     dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
 }
 
-void setServo_GoalVelocity(ServoXM4340 *servo, float velocity)
+void setServo_GoalVelocity(volatile ServoXM4340 *servo, float velocity)
 {
 
     // parameters calculated and send the instructions
@@ -298,7 +298,7 @@ void setServo_GoalVelocity(ServoXM4340 *servo, float velocity)
  * @retval  None
  * @note  Range of current limit value is 0~1193 for XM430
  */
-void setServo_CurrentLimit(ServoXM4340 *servo, float current)
+void setServo_CurrentLimit(volatile ServoXM4340 *servo, float current)
 {
     // parameters calculated and send the instruction
     int16_t cur = round(current / DXL_CUR_RESOLUTION);
@@ -311,7 +311,7 @@ void setServo_CurrentLimit(ServoXM4340 *servo, float current)
     dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
 }
 
-void setServo_VelocityLimit(ServoXM4340 *servo, float velocity)
+void setServo_VelocityLimit(volatile ServoXM4340 *servo, float velocity)
 {
     // parameters calculated and send the instruction
     int32_t vel = round(velocity / DXL_VEL_RESOLUTION);
@@ -326,7 +326,7 @@ void setServo_VelocityLimit(ServoXM4340 *servo, float velocity)
     dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
 }
 
-void setServo_ProfileAcceleration(ServoXM4340 *servo, uint16_t maxAcc)
+void setServo_ProfileAcceleration(volatile ServoXM4340 *servo, uint16_t maxAcc)
 {
     // parameters calculated and send the instruction
 
@@ -360,7 +360,7 @@ void setServo_ProfileAcceleration(ServoXM4340 *servo, uint16_t maxAcc)
     dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
 }
 
-void setServo_ProfileVelocity(ServoXM4340 *servo, uint16_t maxVel)
+void setServo_ProfileVelocity(volatile ServoXM4340 *servo, uint16_t maxVel)
 {
 
     // parameters calculated and send the instruction
@@ -395,7 +395,7 @@ void setServo_ProfileVelocity(ServoXM4340 *servo, uint16_t maxVel)
     dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
 }
 
-void setServo_DriveMode(ServoXM4340 *servo, uint8_t conf)
+void setServo_DriveMode(volatile ServoXM4340 *servo, uint8_t conf)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[3] = {0};
@@ -417,7 +417,7 @@ void setServo_DriveMode(ServoXM4340 *servo, uint8_t conf)
  * @param servo ServoXM430 structure
  * @retval None
  */
-void getServo_BaudRate(ServoXM4340 *servo)
+void getServo_BaudRate(volatile ServoXM4340 *servo)
 {
 
     // parameters calculated and send the instruction
@@ -462,7 +462,7 @@ void getServo_BaudRate(ServoXM4340 *servo)
  * @param servo ServoXM430 structure
  * @retval None
  */
-void getServo_TorqueENA(ServoXM4340 *servo)
+void getServo_TorqueENA(volatile ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -481,7 +481,7 @@ void getServo_TorqueENA(ServoXM4340 *servo)
  * @param servo ServoXM430 structure
  * @retval Present Current value, in mA
  */
-float getServo_PresentCurrent(ServoXM4340 *servo)
+float getServo_PresentCurrent(volatile ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -509,7 +509,7 @@ float getServo_PresentCurrent(ServoXM4340 *servo)
  *
  * @note GoalCurrent value reset to CurrentLimit after CurrentLimit parameter is set.
  */
-void getServo_GoalCurrent(ServoXM4340 *servo)
+void getServo_GoalCurrent(volatile ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -532,7 +532,7 @@ void getServo_GoalCurrent(ServoXM4340 *servo)
  * @param  servo ServoXM430 structure
  * @retval  None
  */
-void getServo_CurrentLimit(ServoXM4340 *servo)
+void getServo_CurrentLimit(volatile ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -554,7 +554,7 @@ void getServo_CurrentLimit(ServoXM4340 *servo)
  * @param  servo ServoXM430 structure
  * @retval PresentPosition value in deg unit
  */
-float getServo_PresentPosition(ServoXM4340 *servo)
+float getServo_PresentPosition(volatile ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -577,7 +577,7 @@ float getServo_PresentPosition(ServoXM4340 *servo)
     return (float)pos * DXL_POS_RESOLUTION;
 }
 
-float getServo_PresentVelocity(ServoXM4340 *servo)
+float getServo_PresentVelocity(volatile ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -600,7 +600,7 @@ float getServo_PresentVelocity(ServoXM4340 *servo)
     return (float)vel * DXL_VEL_RESOLUTION;
 }
 
-void getServo_GoalVelocity(ServoXM4340 *servo)
+void getServo_GoalVelocity(volatile ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -621,7 +621,7 @@ void getServo_GoalVelocity(ServoXM4340 *servo)
     servo->GoalVelocity = vel;
 }
 
-void getServo_VelocityLimit(ServoXM4340 *servo)
+void getServo_VelocityLimit(volatile ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -647,7 +647,7 @@ void getServo_VelocityLimit(ServoXM4340 *servo)
  * @param  servo ServoXM430 structure
  * @retval  None
  */
-void getServo_OperatingMode(ServoXM4340 *servo)
+void getServo_OperatingMode(volatile ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -661,7 +661,7 @@ void getServo_OperatingMode(ServoXM4340 *servo)
     servo->OperatingMode = servo->Response.params[0];
 }
 
-void getServo_ProfileAcceleration(ServoXM4340 *servo)
+void getServo_ProfileAcceleration(volatile ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -680,7 +680,7 @@ void getServo_ProfileAcceleration(ServoXM4340 *servo)
     servo->ProfileAcceleration = prof;
 }
 
-void getServo_ProfileVelocity(ServoXM4340 *servo)
+void getServo_ProfileVelocity(volatile ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -699,7 +699,7 @@ void getServo_ProfileVelocity(ServoXM4340 *servo)
     servo->ProfileVelocity = prof;
 }
 
-void getServo_DriveMode(ServoXM4340 *servo)
+void getServo_DriveMode(volatile ServoXM4340 *servo)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -720,14 +720,14 @@ void getServo_DriveMode(ServoXM4340 *servo)
 
 /**
  * @brief  Set the servo GoalPosition parameter at the same time.
- * @param  servoList An array of ServoXM4340 structures
+ * @param  servoList An array of volatile ServoXM4340 structures
  * @param  servoCount Size of servoArray, which represents the number of servo
  * @param  angleList An array of angle command to write into each servo
  * @retval  None
  * @note  Goalposition value has limitation in different operrating mode, see manual.
  * @note  Servos don't return status packet for SyncWrite instruction.
  */
-void syncWrite_GoalPosition(ServoXM4340 *servoList, int servoCount, const float *angleList)
+void syncWrite_GoalPosition(volatile ServoXM4340 *servoList, int servoCount, const float *angleList)
 {
     uint32_t dataArray[SERVO_MAX_COUNT];
     for (int i = 0; i < servoCount; i++)
@@ -741,14 +741,14 @@ void syncWrite_GoalPosition(ServoXM4340 *servoList, int servoCount, const float 
 
 /**
  * @brief  Set the servo GoalCurrent parameter at the same time.
- * @param  servoList An array of ServoXM4340 structures
+ * @param  servoList An array of volatile ServoXM4340 structures
  * @param  servoCount Size of servoArray, which represents the number of servo
  * @param  currentList An array of current command to write into each servo
  * @retval  None
  * @note  GoalCurrent can not be set larger than the CurrentLimit parameter.
  * @note  Servos don't return status packet for SyncWrite instruction.
  */
-void syncWrite_GoalCurrent(ServoXM4340 *servoList, int servoCount, const int16_t *currentList)
+void syncWrite_GoalCurrent(volatile ServoXM4340 *servoList, int servoCount, const int16_t *currentList)
 {
     uint32_t dataArray[SERVO_MAX_COUNT];
 
@@ -768,12 +768,12 @@ void syncWrite_GoalCurrent(ServoXM4340 *servoList, int servoCount, const int16_t
 
 /**
  * @brief  Get the servo Present Position parameter value at the same time.
- * @param  servoList An array of ServoXM4340 structure
+ * @param  servoList An array of volatile ServoXM4340 structure
  * @param  servoCount Size of servoArray,which represents the number of servo
  * @param  posList An array of position buffer to save the present position of each servo
  * @retval None
  */
-void syncRead_PresentPosition(ServoXM4340 *servoList, int servoCount, float *posList)
+void syncRead_PresentPosition(volatile ServoXM4340 *servoList, int servoCount, float *posList)
 {
     getServo_SyncRead(servoList, servoCount, PresentPosition_ADDR_LB, PresentPosition_ADDR_HB, PresentPosition_ByteSize);
     for (int i = 0; i < servoCount; i++)
@@ -792,12 +792,12 @@ void syncRead_PresentPosition(ServoXM4340 *servoList, int servoCount, float *pos
 
 /**
  * @brief  Get the servo PresentCurrent parameter value at the same time.
- * @param  servoList An array of ServoXM4340 structure
+ * @param  servoList An array of volatile ServoXM4340 structure
  * @param  servoCount Size of servoArray,which represents the number of servo
  * @param  curList An array of current buffer to save the present current of each servo
  * @retval None
  */
-void syncRead_PresentCurrent(ServoXM4340 *servoList, int servoCount, float *curList)
+void syncRead_PresentCurrent(volatile ServoXM4340 *servoList, int servoCount, float *curList)
 {
     getServo_SyncRead(servoList, servoCount, PresentCurrent_ADDR_LB, PresentCurrent_ADDR_HB, PresentCurrent_ByteSize);
 
@@ -821,7 +821,7 @@ void syncRead_PresentCurrent(ServoXM4340 *servoList, int servoCount, float *curL
 
 /**
  * @brief  Set the servo parameter at the same time.
- * @param  servoArray An array of ServoXM4340 structures
+ * @param  servoArray An array of volatile ServoXM4340 structures
  * @param  servoCount Size of servoArray, which represents the number of servo
  * @param  addrLB Lower byte of servo parameter address
  * @param  addrHB Higherer byte of servo parameter address
@@ -830,7 +830,7 @@ void syncRead_PresentCurrent(ServoXM4340 *servoList, int servoCount, float *curL
  * @retval HAL_StatusTypeDef
  * @note  Servo don't return status packet for SyncWrite command with Broadcast ID.
  */
-void setServo_SyncWrite(ServoXM4340 *servoArray, int servoCount, uint8_t addrLB, uint8_t addrHB, uint8_t addrSize, uint32_t *dataArray)
+void setServo_SyncWrite(volatile ServoXM4340 *servoArray, int servoCount, uint8_t addrLB, uint8_t addrHB, uint8_t addrSize, uint32_t *dataArray)
 {
 
     // Check all motor have the same UART
@@ -859,7 +859,7 @@ void setServo_SyncWrite(ServoXM4340 *servoArray, int servoCount, uint8_t addrLB,
 
 /**
  * @brief  Get the servo parameter at the same time.
- * @param  servoArray An array of ServoXM4340 structure
+ * @param  servoArray An array of volatile ServoXM4340 structure
  * @param  servoCount Size of servoArray,which represents the number of servo
  * @param  addrLB Lower byte of servo parameter address
  * @param  addrHB Higherer byte of servo parameter address
@@ -867,7 +867,7 @@ void setServo_SyncWrite(ServoXM4340 *servoArray, int servoCount, uint8_t addrLB,
  * @retval HAL status
  * @note  Servo don't return status packet for SyncWrite command with Broadcast ID.
  */
-HAL_StatusTypeDef getServo_SyncRead(ServoXM4340 *servoArray, int servoCount, uint8_t addrLB, uint8_t addrHB, uint8_t addrSize)
+HAL_StatusTypeDef getServo_SyncRead(volatile ServoXM4340 *servoArray, int servoCount, uint8_t addrLB, uint8_t addrHB, uint8_t addrSize)
 {
 
     // Check all motor have the same UART
@@ -930,7 +930,7 @@ HAL_StatusTypeDef getServo_SyncRead(ServoXM4340 *servoArray, int servoCount, uin
         return HAL_ERROR;
 }
 
-void dualTransferServo(ServoXM4340 *servo, int instructionType, int packet_size, uint8_t *params_arr, int param_size)
+void dualTransferServo(volatile ServoXM4340 *servo, int instructionType, int packet_size, uint8_t *params_arr, int param_size)
 {
     do
     {
@@ -996,7 +996,7 @@ uint16_t sendServoCommand(UART_HandleTypeDef *huart, uint8_t servoId, uint8_t co
     return crc_val;
 }
 
-void getServoResponse(ServoXM4340 *servo, uint16_t RxLen)
+void getServoResponse(volatile ServoXM4340 *servo, uint16_t RxLen)
 {
     servo->Response.RxFinished = false;
     clear_RX_buffer(servo);
@@ -1018,7 +1018,7 @@ void getServoResponse(ServoXM4340 *servo, uint16_t RxLen)
         servo->state = SERVO_ONLINE;
 }
 
-void clear_RX_buffer(ServoXM4340 *servo)
+void clear_RX_buffer(volatile ServoXM4340 *servo)
 {
     for (int i = 0; i < SERVO_MAX_RX_BUFFER_SIZE; i++)
     {
@@ -1045,7 +1045,7 @@ bool allTrue(int arr[], int len)
     return true;
 }
 
-bool checkServoResponse(ServoXM4340 *servo)
+bool checkServoResponse(volatile ServoXM4340 *servo)
 {
 
     if (servo->Response.RxBuffer[0] == 0xff && servo->Response.RxBuffer[1] == 0xff && servo->Response.RxBuffer[2] == 0xfd)
