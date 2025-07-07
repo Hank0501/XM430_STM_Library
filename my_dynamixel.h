@@ -97,6 +97,8 @@ typedef struct ServoXM4340
 /*=================================================================================================*/
 /*=================================================================================================*/
 
+void DXL_InitServo(volatile ServoXM4340 *servo, uint8_t ID, UART_HandleTypeDef *huart, GPIO_TypeDef *ctrlPort, uint16_t ctrlPin);
+
 void DXL_SetServoResponse_RxFinished(volatile ServoXM4340 *servo, bool val);
 
 void DXL_SetTxFinished(bool val);

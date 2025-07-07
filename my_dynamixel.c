@@ -23,6 +23,24 @@ volatile bool TxFinished;
 /*=================================================================================================*/
 
 /**
+ * @brief  Init the servo structure param.
+ * @param  servo ServoXM430 structure
+ * @param  ID Servo ID
+ * @param  huart Pointer to a UART_HandleTypeDef structure that contains
+ *                the configuration information for the specified UART module.
+ * @param  ctrlPort GPIOx, x = A, B,...
+ * @param  ctrlPin GPIO_PIN_x, x = 1, 2,...
+ * @retval  None
+ */
+void DXL_InitServo(volatile ServoXM4340 *servo, uint8_t ID, UART_HandleTypeDef *huart, GPIO_TypeDef *ctrlPort, uint16_t ctrlPin)
+{
+    servo->ID = ID;
+    servo->huart = huart;
+    servo->ctrlPort = ctrlPort;
+    servo->ctrlPin = ctrlPin;
+}
+
+/**
  * @brief  Set the RxFinished flag to check whether data received from servo.
  * @param  servo ServoXM430 structure
  * @param  val booling value
@@ -235,7 +253,7 @@ void setServo_TorqueENA(volatile ServoXM4340 *servo, uint8_t torque)
 /**
  * @brief  Set the servo Goal Current parameter.
  * @param  servo ServoXM430 structure
- * @param  current Goal current value
+ * @param  current Goal current value in mA
  * @retval  None
  * @note  Goal current value should not exceed Current Limit value
  */
@@ -256,7 +274,7 @@ void setServo_GoalCurrent(volatile ServoXM4340 *servo, float current)
 /**
  * @brief  Set the servo Goal position parameter.
  * @param  servo ServoXM430 structure
- * @param  angle Goal position value, in degree unit
+ * @param  angle Goal position value, in unit of degree
  * @retval  None
  * @note  Goal position value has limitation in different operrating mode, see manual.
  */
