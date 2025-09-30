@@ -11,9 +11,9 @@
 #ifndef CONTROL_TABLE_H
 #define CONTROL_TABLE_H
 
-#define DXL_POS_RESOLUTION 0.0878906 // deg
-#define DXL_CUR_RESOLUTION 2.69      // mA
-#define DXL_VEL_RESOLUTION 0.229     // rpm
+#define DXL_POS_RESOLUTION 0.0878906f // deg, 360/4096
+#define DXL_CUR_RESOLUTION 2.69f      // mA
+#define DXL_VEL_RESOLUTION 0.229f     // rpm
 
 // XM4340 control table
 #define GoalPosition_ADDR_LB 0x74
@@ -93,8 +93,16 @@
 #define ProfileVelocityLimit_V_Based 32767
 #define ProfileVelocityLimit_T_Based 32737
 
+#define ReturnDelayTime_ADDR_LB 0x09
+#define ReturnDelayTime_ADDR_HB 0x00
+#define ReturnDelayTime_ByteSize 1
+
 #define DriveMode_ADDR_LB 0x0A
 #define DriveMode_ADDR_HB 0x00
 #define DriveMode_ByteSize 1
+
+#define PositionPGain_ADDR_LB 0x54
+#define PositionPGain_ADDR_HB 0x00
+#define PositionPGain_ByteSize 2
 
 #endif

@@ -18,10 +18,24 @@
 
 ## Undone List
 
-- Syncread, Syncwrite..., may write a new dualTransferServo for sync-case, original one for one servo situation.
-- the non-blocking version
-- SyncReadID
-- DMA version is still needed!!!!!
+- the non-blocking version. Not pratical
+- Servo state should be classified as :
+
+  1. rx_state
+  2. tx_state
+
+  For example, like the official Embeded SDK:
+
+  ```c
+  #define	COMM_TXSUCCESS		(0)
+  #define COMM_RXSUCCESS		(1)
+  #define COMM_TXFAIL			(2)
+  #define COMM_RXFAIL			(3)
+  #define COMM_TXERROR		(4)
+  #define COMM_RXWAITING		(5)
+  #define COMM_RXTIMEOUT		(6)
+  #define COMM_RXCORRUPT		(7)
+  ```
 
 # ! Attention !
 

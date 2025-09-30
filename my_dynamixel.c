@@ -10,11 +10,13 @@
 
 #include "my_dynamixel.h"
 #include "stm32f4xx_hal.h"
+#include <string.h>
 #include <math.h>
 
-volatile uint8_t DXL_RxBuffer[SERVO_MAX_RX_BUFFER_SIZE];
+volatile uint8_t DXL_RxBuffer[SERVO_MAX_RX_BUFFER_SIZE * SERVO_MAX_COUNT];
 volatile uint8_t DXL_TxBuffer[SERVO_MAX_TX_BUFFER_SIZE];
 volatile bool TxFinished;
+volatile bool RxFinished;
 
 /*=================================================================================================*/
 /*=================================================================================================*/
@@ -40,17 +42,9 @@ void DXL_InitServo(volatile ServoXM4340 *servo, uint8_t ID, UART_HandleTypeDef *
     servo->ctrlPin = ctrlPin;
 }
 
-/**
- * @brief  Set the RxFinished flag to check whether data received from servo.
- * @param  servo ServoXM430 structure
- * @param  val booling value
- *      @arg  true: data received completed
- *      @arg  false: data received incompleted
- * @retval  None
- */
-void DXL_SetServoResponse_RxFinished(volatile ServoXM4340 *servo, bool val)
+void DXL_SetRxFinished(bool val)
 {
-    servo->Response.RxFinished = val;
+    RxFinished = val;
 }
 
 void DXL_SetTxFinished(bool val)
@@ -58,18 +52,47 @@ void DXL_SetTxFinished(bool val)
     TxFinished = val;
 }
 
-void DXL_AssignRxBufferToServo(volatile ServoXM4340 *servo)
+void DXL_AssignRxBufferToServo(ServoXM4340 *servoList, int servoCount, int dataLen)
 {
+    uint16_t index = 0;
 
-    for (int i = 0; i < servo->Response.RxBuffer[INDEX_SATUS_PACKET_LEN_L] + 7; i++)
+    while (index + 7 <= dataLen) // 7 = header + len
     {
-        servo->Response.RxBuffer[i] = DXL_RxBuffer[i];
-    }
-}
+        // check header
+        if (DXL_RxBuffer[index] == 0xFF &&
+            DXL_RxBuffer[index + 1] == 0xFF &&
+            DXL_RxBuffer[index + 2] == 0xFD &&
+            DXL_RxBuffer[index + 3] == 0x00)
+        {
+            uint8_t id = DXL_RxBuffer[index + 4];
+            uint16_t packetLen = ((uint16_t)DXL_RxBuffer[index + 5] | (DXL_RxBuffer[index + 6] << 8)) + 7;
 
-uint8_t DXL_GetRxBufferID(void)
-{
-    return DXL_RxBuffer[INDEX_SATUS_PACKET_ID];
+            if (id != ID_broadcast)
+            {
+                for (uint8_t i = 0; i < servoCount; i++)
+                {
+                    // assign to the corresponded servo
+                    if (servoList[i].ID == id)
+                    {
+                        if (packetLen <= SERVO_MAX_RX_BUFFER_SIZE)
+                        {
+                            memcpy(servoList[i].Response.RxBuffer, &DXL_RxBuffer[index], packetLen);
+                        }
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                // BROADCAST_ID case
+            }
+
+            // move to next packet
+            index += packetLen;
+        }
+        else
+            break;
+    }
 }
 
 /*=================================================================================================*/
@@ -96,6 +119,9 @@ void servo_FactoryReset(volatile ServoXM4340 *servo, uint8_t packetID, uint8_t r
     // parameters calculated and send the instruction
     uint8_t params_arr[1] = {0};
     params_arr[0] = resetvalue;
+
+    // RxBuffer clear
+    clear_Servo_RX_buffer(servo);
 
     // TX turn on
     HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
@@ -157,6 +183,9 @@ void setServo_BaudRate(volatile ServoXM4340 *servo, uint8_t baud)
     params_arr[1] = BaudRate_ADDR_HB;
     params_arr[2] = baud;
 
+    // RxBuffer clear
+    clear_Servo_RX_buffer(servo);
+
     // TX turn on
     HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
 
@@ -188,6 +217,9 @@ void setServo_ID(volatile ServoXM4340 *servo, uint8_t id)
     params_arr[0] = ID_ADDR_LB;
     params_arr[1] = ID_ADDR_HB;
     params_arr[2] = id;
+
+    // RxBuffer clear
+    clear_Servo_RX_buffer(servo);
 
     // TX turn on
     HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
@@ -261,7 +293,7 @@ void setServo_GoalCurrent(volatile ServoXM4340 *servo, float current)
 {
 
     // parameters calculated and send the instruction
-    int16_t cur = round(current / DXL_CUR_RESOLUTION);
+    int16_t cur = roundf(current / DXL_CUR_RESOLUTION);
     uint8_t params_arr[4] = {0};
     params_arr[0] = GoalCurrent_ADDR_LB;
     params_arr[1] = GoalCurrent_ADDR_HB;
@@ -281,7 +313,7 @@ void setServo_GoalCurrent(volatile ServoXM4340 *servo, float current)
 void setServo_GoalPosition(volatile ServoXM4340 *servo, float angle)
 {
     // parameters calculated and send the instruction
-    int32_t ang = round(angle / DXL_POS_RESOLUTION);
+    int32_t ang = roundf(angle / DXL_POS_RESOLUTION);
     uint8_t params_arr[6] = {0};
     params_arr[0] = GoalPosition_ADDR_LB;
     params_arr[1] = GoalPosition_ADDR_HB;
@@ -297,7 +329,7 @@ void setServo_GoalVelocity(volatile ServoXM4340 *servo, float velocity)
 {
 
     // parameters calculated and send the instructions
-    int32_t vel = round(velocity / DXL_VEL_RESOLUTION);
+    int32_t vel = roundf(velocity / DXL_VEL_RESOLUTION);
     uint8_t params_arr[6] = {0};
     params_arr[0] = GoalVelocity_ADDR_LB;
     params_arr[1] = GoalVelocity_ADDR_HB;
@@ -319,7 +351,7 @@ void setServo_GoalVelocity(volatile ServoXM4340 *servo, float velocity)
 void setServo_CurrentLimit(volatile ServoXM4340 *servo, float current)
 {
     // parameters calculated and send the instruction
-    int16_t cur = round(current / DXL_CUR_RESOLUTION);
+    int16_t cur = roundf(current / DXL_CUR_RESOLUTION);
     uint8_t params_arr[4] = {0};
     params_arr[0] = CurrentLimit_ADDR_LB;
     params_arr[1] = CurrentLimit_ADDR_HB;
@@ -332,7 +364,7 @@ void setServo_CurrentLimit(volatile ServoXM4340 *servo, float current)
 void setServo_VelocityLimit(volatile ServoXM4340 *servo, float velocity)
 {
     // parameters calculated and send the instruction
-    int32_t vel = round(velocity / DXL_VEL_RESOLUTION);
+    int32_t vel = roundf(velocity / DXL_VEL_RESOLUTION);
     uint8_t params_arr[6] = {0};
     params_arr[0] = VelocityLimit_ADDR_LB;
     params_arr[1] = VelocityLimit_ADDR_HB;
@@ -420,6 +452,36 @@ void setServo_DriveMode(volatile ServoXM4340 *servo, uint8_t conf)
     params_arr[0] = DriveMode_ADDR_LB;
     params_arr[1] = DriveMode_ADDR_HB;
     params_arr[2] = conf;
+
+    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+}
+
+/**
+ * @brief  Set the servo Current Limit parameter.
+ * @param  servo ServoXM430 structure
+ * @param  delay_val Return delay time in the unit of 2[μsec]
+ * @retval  None
+ * @note  Range of delay_val is 0 ~ 254 for XM430
+ */
+void setServo_ReturnDelayTime(volatile ServoXM4340 *servo, uint8_t delay_val)
+{
+    // parameters calculated and send the instruction
+    uint8_t params_arr[3] = {0};
+    params_arr[0] = ReturnDelayTime_ADDR_LB;
+    params_arr[1] = ReturnDelayTime_ADDR_HB;
+    params_arr[2] = delay_val;
+
+    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+}
+
+void setServo_Position_PGain(volatile ServoXM4340 *servo, uint16_t p_gain)
+{
+    // parameters calculated and send the instruction
+    uint8_t params_arr[4] = {0};
+    params_arr[0] = PositionPGain_ADDR_LB;
+    params_arr[1] = PositionPGain_ADDR_HB;
+    params_arr[2] = (uint8_t)p_gain & 0x00ff;
+    params_arr[3] = (uint8_t)(p_gain >> 8) & (0x00ff);
 
     dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
 }
@@ -730,6 +792,36 @@ void getServo_DriveMode(volatile ServoXM4340 *servo)
     servo->DriveMode = servo->Response.params[0];
 }
 
+void getServo_ReturnDelayTime(volatile ServoXM4340 *servo)
+{
+    // parameters calculated and send the instruction
+    uint8_t params_arr[4] = {0};
+    params_arr[0] = ReturnDelayTime_ADDR_LB;
+    params_arr[1] = ReturnDelayTime_ADDR_HB;
+    params_arr[2] = ReturnDelayTime_ByteSize;
+    params_arr[3] = 0x00;
+
+    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + ReturnDelayTime_ByteSize, params_arr, sizeof(params_arr));
+    servo->ReturnDelay = servo->Response.params[0];
+}
+
+void getServo_Position_PGain(volatile ServoXM4340 *servo)
+{
+    // parameters calculated and send the instruction
+    uint8_t params_arr[4] = {0};
+    params_arr[0] = PositionPGain_ADDR_LB;
+    params_arr[1] = PositionPGain_ADDR_HB;
+    params_arr[2] = PositionPGain_ByteSize;
+    params_arr[3] = 0x00;
+
+    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + PositionPGain_ByteSize, params_arr, sizeof(params_arr));
+
+    uint16_t p_gain = 0;
+    p_gain |= (uint16_t)servo->Response.params[0];
+    p_gain |= (uint16_t)servo->Response.params[1] << 8;
+    servo->Position_PGain = p_gain;
+}
+
 /*=================================================================================================*/
 /*=================================================================================================*/
 /*===================== Function to "Syncwrite" multiple Servo parameter ==========================*/
@@ -750,8 +842,8 @@ void syncWrite_GoalPosition(volatile ServoXM4340 *servoList, int servoCount, con
     uint32_t dataArray[SERVO_MAX_COUNT];
     for (int i = 0; i < servoCount; i++)
     {
-        int32_t temp = angleList[i] / 0.08789; // 0.08789 = 360/4096
-        uint32_t angle_cmd = temp;             // in 2's complement
+        int32_t temp = angleList[i] / DXL_POS_RESOLUTION; // 0.08789 = 360/4096
+        uint32_t angle_cmd = temp;                        // in 2's complement
         dataArray[i] = angle_cmd;
     }
     setServo_SyncWrite(servoList, servoCount, GoalPosition_ADDR_LB, GoalPosition_ADDR_HB, GoalPosition_ByteSize, dataArray);
@@ -784,6 +876,16 @@ void syncWrite_GoalCurrent(volatile ServoXM4340 *servoList, int servoCount, cons
 /*=================================================================================================*/
 /*=================================================================================================*/
 
+void syncRead_ID(volatile ServoXM4340 *servoList, int servoCount)
+{
+    getServo_SyncRead(servoList, servoCount, ID_ADDR_LB, ID_ADDR_HB, ID_ByteSize);
+
+    for (int i = 0; i < servoCount; i++)
+    {
+        servoList[i].ID = (uint8_t)servoList[i].Response.params[0];
+    }
+}
+
 /**
  * @brief  Get the servo Present Position parameter value at the same time.
  * @param  servoList An array of volatile ServoXM4340 structure
@@ -804,7 +906,7 @@ void syncRead_PresentPosition(volatile ServoXM4340 *servoList, int servoCount, f
 
         servoList[i].PresentPosition = pos;
 
-        posList[i] = (float)pos * 360.0 / 4096.0;
+        posList[i] = (float)pos * DXL_POS_RESOLUTION;
     }
 }
 
@@ -827,7 +929,7 @@ void syncRead_PresentCurrent(volatile ServoXM4340 *servoList, int servoCount, fl
 
         servoList[i].PresentCurrent = pre_cur;
 
-        curList[i] = (float)pre_cur * 2.69;
+        curList[i] = (float)pre_cur * DXL_CUR_RESOLUTION;
     }
 }
 
@@ -905,15 +1007,21 @@ HAL_StatusTypeDef getServo_SyncRead(volatile ServoXM4340 *servoArray, int servoC
     volatile int state[SERVO_MAX_COUNT];
     for (int i = 0; i < servoCount; i++)
     {
-        received[i] = true;
-        state[i] = SERVO_ONLINE;
+        received[i] = false;
+        state[i] = SERVO_OFFLINE;
     }
 
     do
     {
+        // RxBuffer clear
+        for (int i = 0; i < servoCount; i++)
+        {
+            clear_Servo_RX_buffer(&servoArray[i]);
+        }
+
         // TX turn on
         HAL_GPIO_WritePin(servoArray[0].ctrlPort, servoArray[0].ctrlPin, GPIO_PIN_SET);
-
+        TxFinished = false;
         sendServoCommand(servoArray[0].huart, ID_broadcast, INSTRUCTION_SYNC_READ, 4 + servoCount, params_arr);
 
         while (!TxFinished)
@@ -924,11 +1032,25 @@ HAL_StatusTypeDef getServo_SyncRead(volatile ServoXM4340 *servoArray, int servoC
         // RX turn on
         HAL_GPIO_WritePin(servoArray[0].ctrlPort, servoArray[0].ctrlPin, GPIO_PIN_RESET);
 
-        for (int i = 0; i < servoCount; i++)
+        RxFinished = false;
+
+        HAL_UART_Receive_DMA(servoArray[0].huart, DXL_RxBuffer, servoCount * (SIZE_STATUS_PACKET + addrSize));
+
+        uint32_t tickstart = HAL_GetTick();
+        while (!RxFinished)
         {
-            // wait for receiving completed
-            getServoResponse(&servoArray[i], SIZE_STATUS_PACKET + addrSize);
+
+            if ((HAL_GetTick() - tickstart) > 1000)
+            {
+                for (int i = 0; i < servoCount; i++)
+                {
+                    servoArray[i].state = SERVO_OFFLINE;
+                    break; // break while
+                }
+            }
         }
+
+        DXL_AssignRxBufferToServo(servoArray, servoCount, servoCount * (SIZE_STATUS_PACKET + addrSize));
 
         for (int i = 0; i < servoCount; i++)
         {
@@ -938,6 +1060,7 @@ HAL_StatusTypeDef getServo_SyncRead(volatile ServoXM4340 *servoArray, int servoC
                 received[i] = checkServoResponse(&servoArray[i]);
             }
         }
+
     } while (allTrue(received, servoCount) != true);
 
     HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
@@ -952,6 +1075,9 @@ void dualTransferServo(volatile ServoXM4340 *servo, int instructionType, int pac
 {
     do
     {
+        // RxBuffer clear
+        clear_Servo_RX_buffer(servo);
+
         // TX turn on
         HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
 
@@ -1016,38 +1142,44 @@ uint16_t sendServoCommand(UART_HandleTypeDef *huart, uint8_t servoId, uint8_t co
 
 void getServoResponse(volatile ServoXM4340 *servo, uint16_t RxLen)
 {
-    servo->Response.RxFinished = false;
-    clear_RX_buffer(servo);
+    RxFinished = false;
     // data received and processed in Uart_Callback function
     HAL_UART_Receive_DMA(servo->huart, DXL_RxBuffer, RxLen);
 
     uint32_t tickstart = HAL_GetTick();
 
     // loop until Receive confirmed
-    while (!servo->Response.RxFinished)
+    while (!RxFinished)
     {
+
         if ((HAL_GetTick() - tickstart) > 1000)
         {
             servo->state = SERVO_OFFLINE;
             break; // break while
         }
     }
-    if (servo->Response.RxFinished)
-        servo->state = SERVO_ONLINE;
+
+    DXL_AssignRxBufferToServo(servo, 1, RxLen);
 }
 
-void clear_RX_buffer(volatile ServoXM4340 *servo)
+void clear_Servo_RX_buffer(volatile ServoXM4340 *servo)
 {
     for (int i = 0; i < SERVO_MAX_RX_BUFFER_SIZE; i++)
     {
         servo->Response.RxBuffer[i] = 0;
+    }
+}
+void clear_DXL_RX_buffer(void)
+{
+    for (int i = 0; i < sizeof(DXL_RxBuffer); i++)
+    {
         DXL_RxBuffer[i] = 0;
     }
 }
 
 void clear_TX_buffer(void)
 {
-    for (int i = 0; i < SERVO_MAX_TX_BUFFER_SIZE; i++)
+    for (int i = 0; i < sizeof(DXL_TxBuffer); i++)
     {
         DXL_TxBuffer[i] = 0;
     }
@@ -1083,16 +1215,26 @@ bool checkServoResponse(volatile ServoXM4340 *servo)
                 {
                     servo->Response.params[i] = servo->Response.RxBuffer[9 + i];
                 }
+                servo->state = SERVO_ONLINE;
                 return true;
             }
             else
+            {
+                servo->state = SERVO_OFFLINE;
                 return false;
+            }
         }
         else
+        {
+            servo->state = SERVO_OFFLINE;
             return false;
+        }
     }
     else
+    {
+        servo->state = SERVO_OFFLINE;
         return false;
+    }
 }
 
 unsigned short updateCRC(uint16_t crc_accum, uint8_t *data_blk_ptr, uint16_t data_blk_size)

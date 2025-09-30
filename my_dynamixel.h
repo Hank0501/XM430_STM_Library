@@ -23,7 +23,7 @@
 #define SERVO_MAX_PARAMS 10
 #define SERVO_MAX_TX_BUFFER_SIZE 100 //  CRC bytes excluded , 8(Fixed bytes, Header ~ Inst) + 4 + (1 + SERVO_MAX_ADDR_SIZE) * SERVO_MAX_COUNT
 #define SERVO_MAX_RX_BUFFER_SIZE 25  //  The entire Rxd Buffer size
-#define SERVO_MAX_COUNT 15
+#define SERVO_MAX_COUNT 5
 #define SERVO_MAX_ADDR_SIZE 4
 
 // used for response packet prossessing
@@ -44,7 +44,7 @@
 #include "stm32f4xx_hal.h"
 #include "control_table.h"
 
-extern volatile uint8_t DXL_RxBuffer[SERVO_MAX_RX_BUFFER_SIZE];
+extern volatile uint8_t DXL_RxBuffer[SERVO_MAX_RX_BUFFER_SIZE * SERVO_MAX_COUNT];
 extern volatile uint8_t DXL_TxBuffer[SERVO_MAX_TX_BUFFER_SIZE];
 extern volatile bool TxFinished;
 
@@ -56,7 +56,6 @@ typedef struct ServoResponse
     uint8_t error;
     uint8_t params[SERVO_MAX_PARAMS];
     uint8_t crc[2];
-    bool RxFinished;
 } ServoResponse;
 
 typedef struct ServoXM4340
@@ -83,6 +82,8 @@ typedef struct ServoXM4340
     uint32_t ProfileAcceleration;
     uint32_t ProfileVelocity;
 
+    uint16_t Position_PGain;
+
     // Communication used
     UART_HandleTypeDef *huart;
     GPIO_TypeDef *ctrlPort;
@@ -99,13 +100,15 @@ typedef struct ServoXM4340
 
 void DXL_InitServo(volatile ServoXM4340 *servo, uint8_t ID, UART_HandleTypeDef *huart, GPIO_TypeDef *ctrlPort, uint16_t ctrlPin);
 
-void DXL_SetServoResponse_RxFinished(volatile ServoXM4340 *servo, bool val);
+// void DXL_SetServoResponse_RxFinished(volatile ServoXM4340 *servoList, int servoCount, bool val);
+
+void DXL_SetRxFinished(bool val);
 
 void DXL_SetTxFinished(bool val);
 
-void DXL_AssignRxBufferToServo(volatile ServoXM4340 *servo);
+void DXL_AssignRxBufferToServo(ServoXM4340 *servoList, int servoCount, int dataLen);
 
-uint8_t DXL_GetRxBufferID(void);
+// uint8_t DXL_GetRxBufferID(void);
 
 /*=================================================================================================*/
 /*=================================================================================================*/
@@ -145,6 +148,10 @@ void setServo_ProfileVelocity(volatile ServoXM4340 *servo, uint16_t maxVel);
 
 void setServo_DriveMode(volatile ServoXM4340 *servo, uint8_t conf);
 
+void setServo_ReturnDelayTime(volatile ServoXM4340 *servo, uint8_t delay_val);
+
+void setServo_Position_PGain(volatile ServoXM4340 *servo, uint16_t p_gain);
+
 /*=================================================================================================*/
 /*=================================================================================================*/
 /*===========================  Function to Read single Servo parameter  ===========================*/
@@ -177,6 +184,10 @@ void getServo_ProfileVelocity(volatile ServoXM4340 *servo);
 
 void getServo_DriveMode(volatile ServoXM4340 *servo);
 
+void getServo_ReturnDelayTime(volatile ServoXM4340 *servo);
+
+void getServo_Position_PGain(volatile ServoXM4340 *servo);
+
 /*=================================================================================================*/
 /*=================================================================================================*/
 /*===================== Function to "Syncwrite" multiple Servo parameter ==========================*/
@@ -192,6 +203,8 @@ void syncWrite_GoalCurrent(volatile ServoXM4340 *servoList, int servoCount, cons
 /*===================== Function to "Syncread" multiple Servo parameter ===========================*/
 /*=================================================================================================*/
 /*=================================================================================================*/
+
+void syncRead_ID(volatile ServoXM4340 *servoList, int servoCount);
 
 void syncRead_PresentPosition(volatile ServoXM4340 *servoList, int servoCount, float *posList);
 
@@ -213,7 +226,9 @@ uint16_t sendServoCommand(UART_HandleTypeDef *huart, uint8_t servoId, uint8_t co
 
 void getServoResponse(volatile ServoXM4340 *servo, uint16_t RxLen);
 
-void clear_RX_buffer(volatile ServoXM4340 *servo);
+void clear_Servo_RX_buffer(volatile ServoXM4340 *servo);
+
+void clear_DXL_RX_buffer(void);
 
 void clear_TX_buffer(void);
 
