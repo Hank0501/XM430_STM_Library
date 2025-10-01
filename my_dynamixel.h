@@ -228,7 +228,7 @@ void getServoResponse(volatile ServoXM4340 *servo, uint16_t RxLen);
 
 void clear_Servo_RX_buffer(volatile ServoXM4340 *servo);
 
-void clear_DXL_RX_buffer(void);
+void clear_DXL_RX_buffer(int dataLen);
 
 void clear_TX_buffer(void);
 
