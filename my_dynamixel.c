@@ -93,7 +93,7 @@ void DXL_AssignRxBufferToServo(ServoXM4340 *servoList, int servoCount, int dataL
         else
             break;
     }
-    clear_DXL_RX_buffer(dataLen);
+    // clear_DXL_RX_buffer(dataLen);
 }
 
 /*=================================================================================================*/
@@ -186,8 +186,9 @@ void setServo_BaudRate(volatile ServoXM4340 *servo, uint8_t baud)
 
     // RxBuffer clear
     clear_Servo_RX_buffer(servo);
-    // // DXL_RxBuffer ready
-    // HAL_UART_Receive_DMA(servo->huart, DXL_RxBuffer, SIZE_STATUS_PACKET);
+
+    // DXL_RxBuffer ready
+    HAL_UART_Receive_DMA(servo->huart, DXL_RxBuffer, SIZE_STATUS_PACKET);
 
     // TX turn on
     HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
@@ -223,8 +224,9 @@ void setServo_ID(volatile ServoXM4340 *servo, uint8_t id)
 
     // RxBuffer clear
     clear_Servo_RX_buffer(servo);
-    // // DXL_RxBuffer ready
-    // HAL_UART_Receive_DMA(servo->huart, DXL_RxBuffer, SIZE_STATUS_PACKET);
+
+    // DXL_RxBuffer ready
+    HAL_UART_Receive_DMA(servo->huart, DXL_RxBuffer, SIZE_STATUS_PACKET);
 
     // TX turn on
     HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
@@ -863,14 +865,14 @@ void syncWrite_GoalPosition(volatile ServoXM4340 *servoList, int servoCount, con
  * @note  GoalCurrent can not be set larger than the CurrentLimit parameter.
  * @note  Servos don't return status packet for SyncWrite instruction.
  */
-void syncWrite_GoalCurrent(volatile ServoXM4340 *servoList, int servoCount, const int16_t *currentList)
+void syncWrite_GoalCurrent(volatile ServoXM4340 *servoList, int servoCount, const float *currentList)
 {
     uint32_t dataArray[SERVO_MAX_COUNT];
 
     for (int i = 0; i < servoCount; i++)
     {
-        currentList[i];
-        dataArray[i] = (uint16_t)currentList[i];
+        int16_t cur = (int16_t)roundf(currentList[i] / DXL_CUR_RESOLUTION);
+        dataArray[i] = (uint16_t)cur;
     }
     setServo_SyncWrite(servoList, servoCount, GoalCurrent_ADDR_LB, GoalCurrent_ADDR_HB, GoalCurrent_ByteSize, dataArray);
 }
@@ -928,16 +930,33 @@ void syncRead_PresentCurrent(volatile ServoXM4340 *servoList, int servoCount, fl
 
     for (int i = 0; i < servoCount; i++)
     {
-        int16_t pre_cur = 0;
-        pre_cur |= (int)servoList[i].Response.params[0];
-        pre_cur |= (int)servoList[i].Response.params[1] << 8;
+        int16_t pres_cur = 0;
+        pres_cur |= (int)servoList[i].Response.params[0];
+        pres_cur |= (int)servoList[i].Response.params[1] << 8;
 
-        servoList[i].PresentCurrent = pre_cur;
+        servoList[i].PresentCurrent = pres_cur;
 
-        curList[i] = (float)pre_cur * DXL_CUR_RESOLUTION;
+        curList[i] = (float)pres_cur * DXL_CUR_RESOLUTION;
     }
 }
 
+void syncRead_PresentVelocity(volatile ServoXM4340 *servoList, int servoCount, float *velList)
+{
+    getServo_SyncRead(servoList, servoCount, PresentVelocity_ADDR_LB, PresentVelocity_ADDR_HB, PresentVelocity_ByteSize);
+
+    for (int i = 0; i < servoCount; i++)
+    {
+        int32_t pres_vel = 0;
+        pres_vel |= (int)servoList[i].Response.params[0];
+        pres_vel |= (int)servoList[i].Response.params[1] << 8;
+        pres_vel |= (int)servoList[i].Response.params[2] << 16;
+        pres_vel |= (int)servoList[i].Response.params[3] << 24;
+
+        servoList[i].PresentVelocity = pres_vel;
+
+        velList[i] = (float)pres_vel * DXL_VEL_RESOLUTION;
+    }
+}
 /*=================================================================================================*/
 /*=================================================================================================*/
 /*===================== Function that should not  be called externally: ===========================*/
@@ -1028,6 +1047,7 @@ HAL_StatusTypeDef getServo_SyncRead(volatile ServoXM4340 *servoArray, int servoC
         {
             clear_Servo_RX_buffer(&servoArray[i]);
         }
+
         // DXL_RxBuffer ready
         HAL_UART_Receive_DMA(servoArray[0].huart, DXL_RxBuffer, servoCount * (SIZE_STATUS_PACKET + addrSize));
 
@@ -1073,7 +1093,7 @@ HAL_StatusTypeDef getServo_SyncRead(volatile ServoXM4340 *servoArray, int servoC
 
     } while (allTrue(received, servoCount) != true);
 
-    HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12);
+    // HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13); // LD3
 
     if (allTrue(state, servoCount) == true)
         return HAL_OK;
@@ -1087,6 +1107,10 @@ void dualTransferServo(volatile ServoXM4340 *servo, int instructionType, int pac
     {
         // RxBuffer clear
         clear_Servo_RX_buffer(servo);
+
+        // data received and processed in Uart_Callback function
+        // DXL_RxBuffer ready
+        HAL_UART_Receive_DMA(servo->huart, DXL_RxBuffer, packet_size);
 
         // TX turn on
         HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
@@ -1152,9 +1176,6 @@ uint16_t sendServoCommand(UART_HandleTypeDef *huart, uint8_t servoId, uint8_t co
 void getServoResponse(volatile ServoXM4340 *servo, uint16_t RxLen)
 {
     RxFinished = false;
-    // data received and processed in Uart_Callback function
-    // DXL_RxBuffer ready
-    HAL_UART_Receive_DMA(servo->huart, DXL_RxBuffer, RxLen);
 
     uint32_t tickstart = HAL_GetTick();
 

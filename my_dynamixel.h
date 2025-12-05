@@ -23,7 +23,7 @@
 #define SERVO_MAX_PARAMS 10
 #define SERVO_MAX_TX_BUFFER_SIZE 100 //  CRC bytes excluded , 8(Fixed bytes, Header ~ Inst) + 4 + (1 + SERVO_MAX_ADDR_SIZE) * SERVO_MAX_COUNT
 #define SERVO_MAX_RX_BUFFER_SIZE 25  //  The entire Rxd Buffer size
-#define SERVO_MAX_COUNT 5
+#define SERVO_MAX_COUNT 15
 #define SERVO_MAX_ADDR_SIZE 4
 
 // used for response packet prossessing
@@ -47,6 +47,7 @@
 extern volatile uint8_t DXL_RxBuffer[SERVO_MAX_RX_BUFFER_SIZE * SERVO_MAX_COUNT];
 extern volatile uint8_t DXL_TxBuffer[SERVO_MAX_TX_BUFFER_SIZE];
 extern volatile bool TxFinished;
+extern volatile bool RxFinished;
 
 typedef struct ServoResponse
 {
@@ -196,7 +197,7 @@ void getServo_Position_PGain(volatile ServoXM4340 *servo);
 
 void syncWrite_GoalPosition(volatile ServoXM4340 *servoList, int servoCount, const float *angleList);
 
-void syncWrite_GoalCurrent(volatile ServoXM4340 *servoList, int servoCount, const int16_t *currentList);
+void syncWrite_GoalCurrent(volatile ServoXM4340 *servoList, int servoCount, const float *currentList);
 
 /*=================================================================================================*/
 /*=================================================================================================*/
@@ -209,6 +210,8 @@ void syncRead_ID(volatile ServoXM4340 *servoList, int servoCount);
 void syncRead_PresentPosition(volatile ServoXM4340 *servoList, int servoCount, float *posList);
 
 void syncRead_PresentCurrent(volatile ServoXM4340 *servoList, int servoCount, float *curList);
+
+void syncRead_PresentVelocity(volatile ServoXM4340 *servoList, int servoCount, float *velList);
 
 /*=================================================================================================*/
 /*=================================================================================================*/
