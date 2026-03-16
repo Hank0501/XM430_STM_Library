@@ -186,6 +186,7 @@ void setServo_BaudRate(volatile ServoXM4340 *servo, uint8_t baud)
 
     // RxBuffer clear
     clear_Servo_RX_buffer(servo);
+    clear_RX_buffer();
 
     // DXL_RxBuffer ready
     HAL_UART_Receive_DMA(servo->huart, DXL_RxBuffer, SIZE_STATUS_PACKET);
@@ -203,8 +204,7 @@ void setServo_BaudRate(volatile ServoXM4340 *servo, uint8_t baud)
     // RX turn on
     HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_RESET);
 
-    getServoResponse(servo, SIZE_STATUS_PACKET);
-    checkServoResponse(servo);
+    getServoResponse(servo, SIZE_STATUS_PACKET, 10);
 }
 
 /**
@@ -241,7 +241,7 @@ void setServo_ID(volatile ServoXM4340 *servo, uint8_t id)
     // RX turn on
     HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_RESET);
 
-    getServoResponse(servo, SIZE_STATUS_PACKET);
+    getServoResponse(servo, SIZE_STATUS_PACKET, 10);
 }
 
 /**
@@ -256,7 +256,7 @@ void setServo_ID(volatile ServoXM4340 *servo, uint8_t id)
  *      @arg  PWM_CtrlMode: PWm control mode
  * @retval  None
  */
-void setServo_OperatingMode(volatile ServoXM4340 *servo, uint8_t operatingMode)
+bool setServo_OperatingMode(volatile ServoXM4340 *servo, uint8_t operatingMode, uint32_t timeout)
 {
 
     // parameters calculated and send the instruction
@@ -265,7 +265,7 @@ void setServo_OperatingMode(volatile ServoXM4340 *servo, uint8_t operatingMode)
     params_arr[1] = OperatingMode_ADDR_HB;
     params_arr[2] = operatingMode;
 
-    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+    return dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr), timeout);
 }
 
 /**
@@ -277,7 +277,7 @@ void setServo_OperatingMode(volatile ServoXM4340 *servo, uint8_t operatingMode)
  *      @arg  TORQUE_DISABLE: Torque disable
  * @retval  None
  */
-void setServo_TorqueENA(volatile ServoXM4340 *servo, uint8_t torque)
+bool setServo_TorqueENA(volatile ServoXM4340 *servo, uint8_t torque, uint32_t timeout)
 {
 
     // parameters calculated and send the instruction
@@ -286,7 +286,7 @@ void setServo_TorqueENA(volatile ServoXM4340 *servo, uint8_t torque)
     params_arr[1] = TorqueEnable_ADDR_HB;
     params_arr[2] = torque;
 
-    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+    return dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr), timeout);
 }
 
 /**
@@ -296,7 +296,7 @@ void setServo_TorqueENA(volatile ServoXM4340 *servo, uint8_t torque)
  * @retval  None
  * @note  Goal current value should not exceed Current Limit value
  */
-void setServo_GoalCurrent(volatile ServoXM4340 *servo, float current)
+bool setServo_GoalCurrent(volatile ServoXM4340 *servo, float current, uint32_t timeout)
 {
 
     // parameters calculated and send the instruction
@@ -307,7 +307,7 @@ void setServo_GoalCurrent(volatile ServoXM4340 *servo, float current)
     params_arr[2] = (uint8_t)cur & 0x00ff;
     params_arr[3] = (uint8_t)(cur >> 8) & (0x00ff);
 
-    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+    return dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr), timeout);
 }
 
 /**
@@ -317,7 +317,7 @@ void setServo_GoalCurrent(volatile ServoXM4340 *servo, float current)
  * @retval  None
  * @note  Goal position value has limitation in different operrating mode, see manual.
  */
-void setServo_GoalPosition(volatile ServoXM4340 *servo, float angle)
+bool setServo_GoalPosition(volatile ServoXM4340 *servo, float angle, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     int32_t ang = roundf(angle / DXL_POS_RESOLUTION);
@@ -329,10 +329,10 @@ void setServo_GoalPosition(volatile ServoXM4340 *servo, float angle)
     params_arr[4] = (uint8_t)(ang >> 16) & (0x000000ff);
     params_arr[5] = (uint8_t)(ang >> 24) & (0x000000ff);
 
-    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+    return dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr), timeout);
 }
 
-void setServo_GoalVelocity(volatile ServoXM4340 *servo, float velocity)
+bool setServo_GoalVelocity(volatile ServoXM4340 *servo, float velocity, uint32_t timeout)
 {
 
     // parameters calculated and send the instructions
@@ -345,7 +345,7 @@ void setServo_GoalVelocity(volatile ServoXM4340 *servo, float velocity)
     params_arr[4] = (uint8_t)(vel >> 16) & (0x000000ff);
     params_arr[5] = (uint8_t)(vel >> 24) & (0x000000ff);
 
-    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+    return dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr), timeout);
 }
 
 /**
@@ -355,7 +355,7 @@ void setServo_GoalVelocity(volatile ServoXM4340 *servo, float velocity)
  * @retval  None
  * @note  Range of current limit value is 0~1193 for XM430
  */
-void setServo_CurrentLimit(volatile ServoXM4340 *servo, float current)
+bool setServo_CurrentLimit(volatile ServoXM4340 *servo, float current, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     int16_t cur = roundf(current / DXL_CUR_RESOLUTION);
@@ -365,10 +365,10 @@ void setServo_CurrentLimit(volatile ServoXM4340 *servo, float current)
     params_arr[2] = (uint8_t)cur & 0x00ff;
     params_arr[3] = (uint8_t)(cur >> 8) & (0x00ff);
 
-    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+    return dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr), timeout);
 }
 
-void setServo_VelocityLimit(volatile ServoXM4340 *servo, float velocity)
+bool setServo_VelocityLimit(volatile ServoXM4340 *servo, float velocity, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     int32_t vel = roundf(velocity / DXL_VEL_RESOLUTION);
@@ -380,10 +380,10 @@ void setServo_VelocityLimit(volatile ServoXM4340 *servo, float velocity)
     params_arr[4] = (uint8_t)(vel >> 16) & (0x000000ff);
     params_arr[5] = (uint8_t)(vel >> 24) & (0x000000ff);
 
-    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+    return dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr), timeout);
 }
 
-void setServo_ProfileAcceleration(volatile ServoXM4340 *servo, uint16_t maxAcc)
+bool setServo_ProfileAcceleration(volatile ServoXM4340 *servo, uint16_t maxAcc, uint32_t timeout)
 {
     // parameters calculated and send the instruction
 
@@ -414,10 +414,10 @@ void setServo_ProfileAcceleration(volatile ServoXM4340 *servo, uint16_t maxAcc)
         params_arr[5] = (uint8_t)(maxAcc >> 24) & (0x00ff);
     }
 
-    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+    return dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr), timeout);
 }
 
-void setServo_ProfileVelocity(volatile ServoXM4340 *servo, uint16_t maxVel)
+bool setServo_ProfileVelocity(volatile ServoXM4340 *servo, uint16_t maxVel, uint32_t timeout)
 {
 
     // parameters calculated and send the instruction
@@ -449,10 +449,10 @@ void setServo_ProfileVelocity(volatile ServoXM4340 *servo, uint16_t maxVel)
         params_arr[5] = (uint8_t)(maxVel >> 24) & (0x00ff);
     }
 
-    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+    return dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr), timeout);
 }
 
-void setServo_DriveMode(volatile ServoXM4340 *servo, uint8_t conf)
+bool setServo_DriveMode(volatile ServoXM4340 *servo, uint8_t conf, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[3] = {0};
@@ -460,7 +460,7 @@ void setServo_DriveMode(volatile ServoXM4340 *servo, uint8_t conf)
     params_arr[1] = DriveMode_ADDR_HB;
     params_arr[2] = conf;
 
-    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+    return dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr), timeout);
 }
 
 /**
@@ -470,7 +470,7 @@ void setServo_DriveMode(volatile ServoXM4340 *servo, uint8_t conf)
  * @retval  None
  * @note  Range of delay_val is 0 ~ 254 for XM430
  */
-void setServo_ReturnDelayTime(volatile ServoXM4340 *servo, uint8_t delay_val)
+bool setServo_ReturnDelayTime(volatile ServoXM4340 *servo, uint8_t delay_val, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[3] = {0};
@@ -478,10 +478,10 @@ void setServo_ReturnDelayTime(volatile ServoXM4340 *servo, uint8_t delay_val)
     params_arr[1] = ReturnDelayTime_ADDR_HB;
     params_arr[2] = delay_val;
 
-    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+    return dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr), timeout);
 }
 
-void setServo_Position_PGain(volatile ServoXM4340 *servo, uint16_t p_gain)
+bool setServo_Position_PGain(volatile ServoXM4340 *servo, uint16_t p_gain, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -490,7 +490,7 @@ void setServo_Position_PGain(volatile ServoXM4340 *servo, uint16_t p_gain)
     params_arr[2] = (uint8_t)p_gain & 0x00ff;
     params_arr[3] = (uint8_t)(p_gain >> 8) & (0x00ff);
 
-    dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr));
+    return dualTransferServo(servo, INSTRUCTION_WRITE, SIZE_STATUS_PACKET, params_arr, sizeof(params_arr), timeout);
 }
 
 /*=================================================================================================*/
@@ -499,12 +499,30 @@ void setServo_Position_PGain(volatile ServoXM4340 *servo, uint16_t p_gain)
 /*=================================================================================================*/
 /*=================================================================================================*/
 
+bool getServo_Shutdown(volatile ServoXM4340 *servo, uint32_t timeout)
+{
+    // parameters calculated and send the instruction
+    uint8_t params_arr[4] = {0};
+    params_arr[0] = Shutdown_ADDR_LB;
+    params_arr[1] = Shutdown_ADDR_HB;
+    params_arr[2] = Shutdown_ByteSize;
+    params_arr[3] = 0x00;
+
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + BaudRate_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        servo->Shutdown = servo->Response.params[0];
+        return true;
+    }
+    else
+        return false;
+}
+
 /**
  * @brief Get the servo Baudrate value, value of Baudrate variable in "servo" structure will be modified.
  * @param servo ServoXM430 structure
  * @retval None
  */
-void getServo_BaudRate(volatile ServoXM4340 *servo)
+bool getServo_BaudRate(volatile ServoXM4340 *servo, uint32_t timeout)
 {
 
     // parameters calculated and send the instruction
@@ -514,34 +532,38 @@ void getServo_BaudRate(volatile ServoXM4340 *servo)
     params_arr[2] = BaudRate_ByteSize;
     params_arr[3] = 0x00;
 
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + BaudRate_ByteSize, params_arr, sizeof(params_arr));
-
-    switch (servo->Response.params[0])
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + BaudRate_ByteSize, params_arr, sizeof(params_arr), timeout))
     {
-    case BaudRate_57600:
-        servo->BaudRate = 57600;
-        break;
-    case BaudRate_115200:
-        servo->BaudRate = 115200;
-        break;
-    case BaudRate_1M:
-        servo->BaudRate = 1000000;
-        break;
-    case BaudRate_2M:
-        servo->BaudRate = 2000000;
-        break;
-    case BaudRate_3M:
-        servo->BaudRate = 3000000;
-        break;
-    case BaudRate_4M:
-        servo->BaudRate = 4000000;
-        break;
-    case BaudRate_4p5M:
-        servo->BaudRate = 4500000;
-        break;
-    default:
-        break;
+        switch (servo->Response.params[0])
+        {
+        case BaudRate_57600:
+            servo->BaudRate = 57600;
+            break;
+        case BaudRate_115200:
+            servo->BaudRate = 115200;
+            break;
+        case BaudRate_1M:
+            servo->BaudRate = 1000000;
+            break;
+        case BaudRate_2M:
+            servo->BaudRate = 2000000;
+            break;
+        case BaudRate_3M:
+            servo->BaudRate = 3000000;
+            break;
+        case BaudRate_4M:
+            servo->BaudRate = 4000000;
+            break;
+        case BaudRate_4p5M:
+            servo->BaudRate = 4500000;
+            break;
+        default:
+            break;
+        }
+        return true;
     }
+    else
+        return false;
 }
 
 /**
@@ -549,7 +571,7 @@ void getServo_BaudRate(volatile ServoXM4340 *servo)
  * @param servo ServoXM430 structure
  * @retval None
  */
-void getServo_TorqueENA(volatile ServoXM4340 *servo)
+bool getServo_TorqueENA(volatile ServoXM4340 *servo, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -558,9 +580,15 @@ void getServo_TorqueENA(volatile ServoXM4340 *servo)
     params_arr[2] = TorqueEnable_ByteSize;
     params_arr[3] = 0x00;
 
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + TorqueEnable_ByteSize, params_arr, sizeof(params_arr));
-
-    servo->TorqueENA = servo->Response.params[0];
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + TorqueEnable_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        servo->TorqueENA = servo->Response.params[0];
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 /**
@@ -568,7 +596,7 @@ void getServo_TorqueENA(volatile ServoXM4340 *servo)
  * @param servo ServoXM430 structure
  * @retval Present Current value, in mA
  */
-float getServo_PresentCurrent(volatile ServoXM4340 *servo)
+bool getServo_PresentCurrent(volatile ServoXM4340 *servo, uint32_t timeout, float *outCurrent)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -577,16 +605,19 @@ float getServo_PresentCurrent(volatile ServoXM4340 *servo)
     params_arr[2] = PresentCurrent_ByteSize;
     params_arr[3] = 0x00;
 
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + PresentCurrent_ByteSize, params_arr, sizeof(params_arr));
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + PresentCurrent_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        // record the current  of the servo
+        int16_t pre_cur = 0;
+        pre_cur |= (int16_t)servo->Response.params[0];
+        pre_cur |= (int16_t)servo->Response.params[1] << 8;
 
-    // record the current  of the servo
-    int16_t pre_cur = 0;
-    pre_cur |= (int16_t)servo->Response.params[0];
-    pre_cur |= (int16_t)servo->Response.params[1] << 8;
-
-    servo->PresentCurrent = pre_cur;
-
-    return (float)pre_cur * DXL_CUR_RESOLUTION;
+        servo->PresentCurrent = pre_cur;
+        *outCurrent = (float)pre_cur * DXL_CUR_RESOLUTION;
+        return true;
+    }
+    else
+        return false;
 }
 
 /**
@@ -596,7 +627,7 @@ float getServo_PresentCurrent(volatile ServoXM4340 *servo)
  *
  * @note GoalCurrent value reset to CurrentLimit after CurrentLimit parameter is set.
  */
-void getServo_GoalCurrent(volatile ServoXM4340 *servo)
+bool getServo_GoalCurrent(volatile ServoXM4340 *servo, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -604,14 +635,18 @@ void getServo_GoalCurrent(volatile ServoXM4340 *servo)
     params_arr[1] = GoalCurrent_ADDR_HB;
     params_arr[2] = GoalCurrent_ByteSize;
     params_arr[3] = 0x00;
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + GoalCurrent_ByteSize, params_arr, sizeof(params_arr));
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + GoalCurrent_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        // record the current  of the servo
+        int16_t goal_cur = 0;
+        goal_cur |= (int16_t)servo->Response.params[0];
+        goal_cur |= (int16_t)servo->Response.params[1] << 8;
 
-    // record the current  of the servo
-    int16_t goal_cur = 0;
-    goal_cur |= (int16_t)servo->Response.params[0];
-    goal_cur |= (int16_t)servo->Response.params[1] << 8;
-
-    servo->GoalCurrent = goal_cur;
+        servo->GoalCurrent = goal_cur;
+        return true;
+    }
+    else
+        return false;
 }
 
 /**
@@ -619,7 +654,7 @@ void getServo_GoalCurrent(volatile ServoXM4340 *servo)
  * @param  servo ServoXM430 structure
  * @retval  None
  */
-void getServo_CurrentLimit(volatile ServoXM4340 *servo)
+bool getServo_CurrentLimit(volatile ServoXM4340 *servo, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -627,13 +662,17 @@ void getServo_CurrentLimit(volatile ServoXM4340 *servo)
     params_arr[1] = CurrentLimit_ADDR_HB;
     params_arr[2] = CurrentLimit_ByteSize;
     params_arr[3] = 0x00;
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + CurrentLimit_ByteSize, params_arr, sizeof(params_arr));
-
-    // record the current  of the servo
-    uint16_t cur = 0;
-    cur |= (uint16_t)servo->Response.params[0];
-    cur |= (uint16_t)servo->Response.params[1] << 8;
-    servo->CurrentLimit = cur;
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + CurrentLimit_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        // record the current  of the servo
+        uint16_t cur = 0;
+        cur |= (uint16_t)servo->Response.params[0];
+        cur |= (uint16_t)servo->Response.params[1] << 8;
+        servo->CurrentLimit = cur;
+        return true;
+    }
+    else
+        return false;
 }
 
 /**
@@ -641,7 +680,7 @@ void getServo_CurrentLimit(volatile ServoXM4340 *servo)
  * @param  servo ServoXM430 structure
  * @retval PresentPosition value in deg unit
  */
-float getServo_PresentPosition(volatile ServoXM4340 *servo)
+bool getServo_PresentPosition(volatile ServoXM4340 *servo, uint32_t timeout, float *outPosition)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -650,21 +689,24 @@ float getServo_PresentPosition(volatile ServoXM4340 *servo)
     params_arr[2] = PresentPosition_ByteSize;
     params_arr[3] = 0x00;
 
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + PresentPosition_ByteSize, params_arr, sizeof(params_arr));
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + PresentPosition_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        // record the postion of the servo
+        int32_t pos = 0;
+        pos |= (uint32_t)servo->Response.params[0];
+        pos |= (uint32_t)servo->Response.params[1] << 8;
+        pos |= (uint32_t)servo->Response.params[2] << 16;
+        pos |= (uint32_t)servo->Response.params[3] << 24;
 
-    // record the postion of the servo
-    int32_t pos = 0;
-    pos |= (uint32_t)servo->Response.params[0];
-    pos |= (uint32_t)servo->Response.params[1] << 8;
-    pos |= (uint32_t)servo->Response.params[2] << 16;
-    pos |= (uint32_t)servo->Response.params[3] << 24;
-
-    servo->PresentPosition = pos;
-
-    return (float)pos * DXL_POS_RESOLUTION;
+        servo->PresentPosition = pos;
+        *outPosition = (float)pos * DXL_POS_RESOLUTION;
+        return true;
+    }
+    else
+        return false;
 }
 
-float getServo_PresentVelocity(volatile ServoXM4340 *servo)
+bool getServo_PresentVelocity(volatile ServoXM4340 *servo, uint32_t timeout, float *outVelocity)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -673,21 +715,24 @@ float getServo_PresentVelocity(volatile ServoXM4340 *servo)
     params_arr[2] = PresentVelocity_ByteSize;
     params_arr[3] = 0x00;
 
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + PresentVelocity_ByteSize, params_arr, sizeof(params_arr));
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + PresentVelocity_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        // record the velocity of the servo
+        int32_t vel = 0;
+        vel |= (uint32_t)servo->Response.params[0];
+        vel |= (uint32_t)servo->Response.params[1] << 8;
+        vel |= (uint32_t)servo->Response.params[2] << 16;
+        vel |= (uint32_t)servo->Response.params[3] << 24;
 
-    // record the velocity of the servo
-    int32_t vel = 0;
-    vel |= (uint32_t)servo->Response.params[0];
-    vel |= (uint32_t)servo->Response.params[1] << 8;
-    vel |= (uint32_t)servo->Response.params[2] << 16;
-    vel |= (uint32_t)servo->Response.params[3] << 24;
-
-    servo->PresentVelocity = vel;
-
-    return (float)vel * DXL_VEL_RESOLUTION;
+        servo->PresentVelocity = vel;
+        *outVelocity = (float)vel * DXL_VEL_RESOLUTION;
+        return true;
+    }
+    else
+        return false;
 }
 
-void getServo_GoalVelocity(volatile ServoXM4340 *servo)
+bool getServo_GoalVelocity(volatile ServoXM4340 *servo, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -696,19 +741,23 @@ void getServo_GoalVelocity(volatile ServoXM4340 *servo)
     params_arr[2] = GoalVelocity_ByteSize;
     params_arr[3] = 0x00;
 
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + GoalVelocity_ByteSize, params_arr, sizeof(params_arr));
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + GoalVelocity_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        // record the velocity of the servo
+        int32_t vel = 0;
+        vel |= (uint32_t)servo->Response.params[0];
+        vel |= (uint32_t)servo->Response.params[1] << 8;
+        vel |= (uint32_t)servo->Response.params[2] << 16;
+        vel |= (uint32_t)servo->Response.params[3] << 24;
 
-    // record the velocity of the servo
-    int32_t vel = 0;
-    vel |= (uint32_t)servo->Response.params[0];
-    vel |= (uint32_t)servo->Response.params[1] << 8;
-    vel |= (uint32_t)servo->Response.params[2] << 16;
-    vel |= (uint32_t)servo->Response.params[3] << 24;
-
-    servo->GoalVelocity = vel;
+        servo->GoalVelocity = vel;
+        return true;
+    }
+    else
+        return false;
 }
 
-void getServo_VelocityLimit(volatile ServoXM4340 *servo)
+bool getServo_VelocityLimit(volatile ServoXM4340 *servo, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -717,16 +766,20 @@ void getServo_VelocityLimit(volatile ServoXM4340 *servo)
     params_arr[2] = VelocityLimit_ByteSize;
     params_arr[3] = 0x00;
 
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + VelocityLimit_ByteSize, params_arr, sizeof(params_arr));
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + VelocityLimit_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        // record the velocity of the servo
+        uint32_t vel = 0;
+        vel |= (uint32_t)servo->Response.params[0];
+        vel |= (uint32_t)servo->Response.params[1] << 8;
+        vel |= (uint32_t)servo->Response.params[2] << 16;
+        vel |= (uint32_t)servo->Response.params[3] << 24;
 
-    // record the velocity of the servo
-    uint32_t vel = 0;
-    vel |= (uint32_t)servo->Response.params[0];
-    vel |= (uint32_t)servo->Response.params[1] << 8;
-    vel |= (uint32_t)servo->Response.params[2] << 16;
-    vel |= (uint32_t)servo->Response.params[3] << 24;
-
-    servo->VelocityLimit = vel;
+        servo->VelocityLimit = vel;
+        return true;
+    }
+    else
+        return false;
 }
 
 /**
@@ -734,7 +787,7 @@ void getServo_VelocityLimit(volatile ServoXM4340 *servo)
  * @param  servo ServoXM430 structure
  * @retval  None
  */
-void getServo_OperatingMode(volatile ServoXM4340 *servo)
+bool getServo_OperatingMode(volatile ServoXM4340 *servo, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -743,12 +796,16 @@ void getServo_OperatingMode(volatile ServoXM4340 *servo)
     params_arr[2] = OperatingMode_ByteSize;
     params_arr[3] = 0x00;
 
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + OperatingMode_ByteSize, params_arr, sizeof(params_arr));
-
-    servo->OperatingMode = servo->Response.params[0];
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + OperatingMode_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        servo->OperatingMode = servo->Response.params[0];
+        return true;
+    }
+    else
+        return false;
 }
 
-void getServo_ProfileAcceleration(volatile ServoXM4340 *servo)
+bool getServo_ProfileAcceleration(volatile ServoXM4340 *servo, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -756,18 +813,22 @@ void getServo_ProfileAcceleration(volatile ServoXM4340 *servo)
     params_arr[1] = ProfileAcceleration_ADDR_HB;
     params_arr[2] = ProfileAcceleration_ByteSize;
     params_arr[3] = 0x00;
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + ProfileAcceleration_ByteSize, params_arr, sizeof(params_arr));
-
-    // record the ProfileAcceleration  of the servo
-    uint32_t prof = 0;
-    prof |= (uint32_t)servo->Response.params[0];
-    prof |= (uint32_t)servo->Response.params[1] << 8;
-    prof |= (uint32_t)servo->Response.params[2] << 16;
-    prof |= (uint32_t)servo->Response.params[3] << 24;
-    servo->ProfileAcceleration = prof;
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + ProfileAcceleration_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        // record the ProfileAcceleration  of the servo
+        uint32_t prof = 0;
+        prof |= (uint32_t)servo->Response.params[0];
+        prof |= (uint32_t)servo->Response.params[1] << 8;
+        prof |= (uint32_t)servo->Response.params[2] << 16;
+        prof |= (uint32_t)servo->Response.params[3] << 24;
+        servo->ProfileAcceleration = prof;
+        return true;
+    }
+    else
+        return false;
 }
 
-void getServo_ProfileVelocity(volatile ServoXM4340 *servo)
+bool getServo_ProfileVelocity(volatile ServoXM4340 *servo, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -775,18 +836,22 @@ void getServo_ProfileVelocity(volatile ServoXM4340 *servo)
     params_arr[1] = ProfileVelocity_ADDR_HB;
     params_arr[2] = ProfileVelocity_ByteSize;
     params_arr[3] = 0x00;
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + ProfileVelocity_ByteSize, params_arr, sizeof(params_arr));
-
-    // record the ProfileVelocity  of the servo
-    uint32_t prof = 0;
-    prof |= (uint32_t)servo->Response.params[0];
-    prof |= (uint32_t)servo->Response.params[1] << 8;
-    prof |= (uint32_t)servo->Response.params[2] << 16;
-    prof |= (uint32_t)servo->Response.params[3] << 24;
-    servo->ProfileVelocity = prof;
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + ProfileVelocity_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        // record the ProfileVelocity  of the servo
+        uint32_t prof = 0;
+        prof |= (uint32_t)servo->Response.params[0];
+        prof |= (uint32_t)servo->Response.params[1] << 8;
+        prof |= (uint32_t)servo->Response.params[2] << 16;
+        prof |= (uint32_t)servo->Response.params[3] << 24;
+        servo->ProfileVelocity = prof;
+        return true;
+    }
+    else
+        return false;
 }
 
-void getServo_DriveMode(volatile ServoXM4340 *servo)
+bool getServo_DriveMode(volatile ServoXM4340 *servo, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -795,11 +860,16 @@ void getServo_DriveMode(volatile ServoXM4340 *servo)
     params_arr[2] = DriveMode_ByteSize;
     params_arr[3] = 0x00;
 
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + DriveMode_ByteSize, params_arr, sizeof(params_arr));
-    servo->DriveMode = servo->Response.params[0];
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + DriveMode_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        servo->DriveMode = servo->Response.params[0];
+        return true;
+    }
+    else
+        return false;
 }
 
-void getServo_ReturnDelayTime(volatile ServoXM4340 *servo)
+bool getServo_ReturnDelayTime(volatile ServoXM4340 *servo, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -808,11 +878,16 @@ void getServo_ReturnDelayTime(volatile ServoXM4340 *servo)
     params_arr[2] = ReturnDelayTime_ByteSize;
     params_arr[3] = 0x00;
 
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + ReturnDelayTime_ByteSize, params_arr, sizeof(params_arr));
-    servo->ReturnDelay = servo->Response.params[0];
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + ReturnDelayTime_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        servo->ReturnDelay = servo->Response.params[0];
+        return true;
+    }
+    else
+        return false;
 }
 
-void getServo_Position_PGain(volatile ServoXM4340 *servo)
+bool getServo_Position_PGain(volatile ServoXM4340 *servo, uint32_t timeout)
 {
     // parameters calculated and send the instruction
     uint8_t params_arr[4] = {0};
@@ -821,12 +896,16 @@ void getServo_Position_PGain(volatile ServoXM4340 *servo)
     params_arr[2] = PositionPGain_ByteSize;
     params_arr[3] = 0x00;
 
-    dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + PositionPGain_ByteSize, params_arr, sizeof(params_arr));
-
-    uint16_t p_gain = 0;
-    p_gain |= (uint16_t)servo->Response.params[0];
-    p_gain |= (uint16_t)servo->Response.params[1] << 8;
-    servo->Position_PGain = p_gain;
+    if (dualTransferServo(servo, INSTRUCTION_READ, SIZE_STATUS_PACKET + PositionPGain_ByteSize, params_arr, sizeof(params_arr), timeout))
+    {
+        uint16_t p_gain = 0;
+        p_gain |= (uint16_t)servo->Response.params[0];
+        p_gain |= (uint16_t)servo->Response.params[1] << 8;
+        servo->Position_PGain = p_gain;
+        return true;
+    }
+    else
+        return false;
 }
 
 /*=================================================================================================*/
@@ -883,14 +962,18 @@ void syncWrite_GoalCurrent(volatile ServoXM4340 *servoList, int servoCount, cons
 /*=================================================================================================*/
 /*=================================================================================================*/
 
-void syncRead_ID(volatile ServoXM4340 *servoList, int servoCount)
+bool syncRead_ID(volatile ServoXM4340 *servoList, int servoCount, uint32_t timeout)
 {
-    getServo_SyncRead(servoList, servoCount, ID_ADDR_LB, ID_ADDR_HB, ID_ByteSize);
-
-    for (int i = 0; i < servoCount; i++)
+    if (getServo_SyncRead(servoList, servoCount, ID_ADDR_LB, ID_ADDR_HB, ID_ByteSize, timeout))
     {
-        servoList[i].ID = (uint8_t)servoList[i].Response.params[0];
+        for (int i = 0; i < servoCount; i++)
+        {
+            servoList[i].ID = (uint8_t)servoList[i].Response.params[0];
+        }
+        return true;
     }
+    else
+        return false;
 }
 
 /**
@@ -900,21 +983,26 @@ void syncRead_ID(volatile ServoXM4340 *servoList, int servoCount)
  * @param  posList An array of position buffer to save the present position of each servo
  * @retval None
  */
-void syncRead_PresentPosition(volatile ServoXM4340 *servoList, int servoCount, float *posList)
+bool syncRead_PresentPosition(volatile ServoXM4340 *servoList, int servoCount, float *posList, uint32_t timeout)
 {
-    getServo_SyncRead(servoList, servoCount, PresentPosition_ADDR_LB, PresentPosition_ADDR_HB, PresentPosition_ByteSize);
-    for (int i = 0; i < servoCount; i++)
+    if (getServo_SyncRead(servoList, servoCount, PresentPosition_ADDR_LB, PresentPosition_ADDR_HB, PresentPosition_ByteSize, timeout))
     {
-        int32_t pos = 0;
-        pos |= servoList[i].Response.params[0];
-        pos |= servoList[i].Response.params[1] << 8;
-        pos |= servoList[i].Response.params[2] << 16;
-        pos |= servoList[i].Response.params[3] << 24;
+        for (int i = 0; i < servoCount; i++)
+        {
+            int32_t pos = 0;
+            pos |= servoList[i].Response.params[0];
+            pos |= servoList[i].Response.params[1] << 8;
+            pos |= servoList[i].Response.params[2] << 16;
+            pos |= servoList[i].Response.params[3] << 24;
 
-        servoList[i].PresentPosition = pos;
+            servoList[i].PresentPosition = pos;
 
-        posList[i] = (float)pos * DXL_POS_RESOLUTION;
+            posList[i] = (float)pos * DXL_POS_RESOLUTION;
+        }
+        return true;
     }
+    else
+        return false;
 }
 
 /**
@@ -924,38 +1012,46 @@ void syncRead_PresentPosition(volatile ServoXM4340 *servoList, int servoCount, f
  * @param  curList An array of current buffer to save the present current of each servo
  * @retval None
  */
-void syncRead_PresentCurrent(volatile ServoXM4340 *servoList, int servoCount, float *curList)
+bool syncRead_PresentCurrent(volatile ServoXM4340 *servoList, int servoCount, float *curList, uint32_t timeout)
 {
-    getServo_SyncRead(servoList, servoCount, PresentCurrent_ADDR_LB, PresentCurrent_ADDR_HB, PresentCurrent_ByteSize);
-
-    for (int i = 0; i < servoCount; i++)
+    if (getServo_SyncRead(servoList, servoCount, PresentCurrent_ADDR_LB, PresentCurrent_ADDR_HB, PresentCurrent_ByteSize, timeout))
     {
-        int16_t pres_cur = 0;
-        pres_cur |= (int)servoList[i].Response.params[0];
-        pres_cur |= (int)servoList[i].Response.params[1] << 8;
+        for (int i = 0; i < servoCount; i++)
+        {
+            int16_t pres_cur = 0;
+            pres_cur |= (int)servoList[i].Response.params[0];
+            pres_cur |= (int)servoList[i].Response.params[1] << 8;
 
-        servoList[i].PresentCurrent = pres_cur;
+            servoList[i].PresentCurrent = pres_cur;
 
-        curList[i] = (float)pres_cur * DXL_CUR_RESOLUTION;
+            curList[i] = (float)pres_cur * DXL_CUR_RESOLUTION;
+        }
+        return true;
     }
+    else
+        return false;
 }
 
-void syncRead_PresentVelocity(volatile ServoXM4340 *servoList, int servoCount, float *velList)
+bool syncRead_PresentVelocity(volatile ServoXM4340 *servoList, int servoCount, float *velList, uint32_t timeout)
 {
-    getServo_SyncRead(servoList, servoCount, PresentVelocity_ADDR_LB, PresentVelocity_ADDR_HB, PresentVelocity_ByteSize);
-
-    for (int i = 0; i < servoCount; i++)
+    if (getServo_SyncRead(servoList, servoCount, PresentVelocity_ADDR_LB, PresentVelocity_ADDR_HB, PresentVelocity_ByteSize, timeout))
     {
-        int32_t pres_vel = 0;
-        pres_vel |= (int)servoList[i].Response.params[0];
-        pres_vel |= (int)servoList[i].Response.params[1] << 8;
-        pres_vel |= (int)servoList[i].Response.params[2] << 16;
-        pres_vel |= (int)servoList[i].Response.params[3] << 24;
+        for (int i = 0; i < servoCount; i++)
+        {
+            int32_t pres_vel = 0;
+            pres_vel |= (int)servoList[i].Response.params[0];
+            pres_vel |= (int)servoList[i].Response.params[1] << 8;
+            pres_vel |= (int)servoList[i].Response.params[2] << 16;
+            pres_vel |= (int)servoList[i].Response.params[3] << 24;
 
-        servoList[i].PresentVelocity = pres_vel;
+            servoList[i].PresentVelocity = pres_vel;
 
-        velList[i] = (float)pres_vel * DXL_VEL_RESOLUTION;
+            velList[i] = (float)pres_vel * DXL_VEL_RESOLUTION;
+        }
+        return true;
     }
+    else
+        return false;
 }
 /*=================================================================================================*/
 /*=================================================================================================*/
@@ -1016,7 +1112,7 @@ void setServo_SyncWrite(volatile ServoXM4340 *servoArray, int servoCount, uint8_
  * @retval HAL status
  * @note  Servo don't return status packet for SyncWrite command with Broadcast ID.
  */
-HAL_StatusTypeDef getServo_SyncRead(volatile ServoXM4340 *servoArray, int servoCount, uint8_t addrLB, uint8_t addrHB, uint8_t addrSize)
+bool getServo_SyncRead(volatile ServoXM4340 *servoArray, int servoCount, uint8_t addrLB, uint8_t addrHB, uint8_t addrSize, uint32_t timeout)
 {
 
     // Check all motor have the same UART
@@ -1040,103 +1136,117 @@ HAL_StatusTypeDef getServo_SyncRead(volatile ServoXM4340 *servoArray, int servoC
         state[i] = SERVO_OFFLINE;
     }
 
-    do
+    // Servo_RxBuffer clear
+    for (int i = 0; i < servoCount; i++)
     {
-        // Servo_RxBuffer clear
-        for (int i = 0; i < servoCount; i++)
+        clear_Servo_RX_buffer(&servoArray[i]);
+        clear_RX_buffer();
+    }
+
+    // DXL_RxBuffer ready
+    HAL_UART_Receive_DMA(servoArray[0].huart, DXL_RxBuffer, servoCount * (SIZE_STATUS_PACKET + addrSize));
+
+    // TX turn on
+    HAL_GPIO_WritePin(servoArray[0].ctrlPort, servoArray[0].ctrlPin, GPIO_PIN_SET);
+
+    sendServoCommand(servoArray[0].huart, ID_broadcast, INSTRUCTION_SYNC_READ, 4 + servoCount, params_arr);
+
+    while (!TxFinished)
+    {
+        // wait until transmitting finished;
+    };
+
+    // RX turn on
+    HAL_GPIO_WritePin(servoArray[0].ctrlPort, servoArray[0].ctrlPin, GPIO_PIN_RESET);
+
+    RxFinished = false;
+
+    uint32_t tickstart = HAL_GetTick();
+    while (!RxFinished)
+    {
+
+        if ((HAL_GetTick() - tickstart) > timeout)
         {
-            clear_Servo_RX_buffer(&servoArray[i]);
-        }
-
-        // DXL_RxBuffer ready
-        HAL_UART_Receive_DMA(servoArray[0].huart, DXL_RxBuffer, servoCount * (SIZE_STATUS_PACKET + addrSize));
-
-        // TX turn on
-        HAL_GPIO_WritePin(servoArray[0].ctrlPort, servoArray[0].ctrlPin, GPIO_PIN_SET);
-
-        sendServoCommand(servoArray[0].huart, ID_broadcast, INSTRUCTION_SYNC_READ, 4 + servoCount, params_arr);
-
-        while (!TxFinished)
-        {
-            // wait until transmitting finished;
-        };
-
-        // RX turn on
-        HAL_GPIO_WritePin(servoArray[0].ctrlPort, servoArray[0].ctrlPin, GPIO_PIN_RESET);
-
-        RxFinished = false;
-
-        uint32_t tickstart = HAL_GetTick();
-        while (!RxFinished)
-        {
-
-            if ((HAL_GetTick() - tickstart) > 1000)
+            for (int i = 0; i < servoCount; i++)
             {
-                for (int i = 0; i < servoCount; i++)
-                {
-                    servoArray[i].state = SERVO_OFFLINE;
-                    break; // break while
-                }
+                state[i] = SERVO_OFFLINE;
+                servoArray[i].RX_err_ctr++;
+                servoArray[i].RX_error = DXL_RX_ERROR_TIMEOUT;
             }
+            HAL_UART_AbortReceive(servoArray[0].huart);
+            break; // break while
         }
+    }
 
+    // Assign RxBuffer data to each servo structure only when all data received
+    if (RxFinished)
+    {
         DXL_AssignRxBufferToServo(servoArray, servoCount, servoCount * (SIZE_STATUS_PACKET + addrSize));
-
         for (int i = 0; i < servoCount; i++)
         {
-            state[i] = servoArray[i].state;
-            if (state[i] != SERVO_OFFLINE)
+            if (checkServoResponse(&servoArray[i]))
             {
-                received[i] = checkServoResponse(&servoArray[i]);
+                servoArray[i].RX_err_ctr = 0;
+                state[i] = SERVO_ONLINE;
+            }
+            else
+            {
+                if (servoArray[i].Response.error >= 128)
+                    state[i] = SERVO_SHUTDOWN;
+                else
+                    state[i] = SERVO_OFFLINE;
+                servoArray[i].RX_err_ctr++;
             }
         }
+    }
 
-    } while (allTrue(received, servoCount) != true);
+    for (int i = 0; i < servoCount; i++)
+        servoArray[i].state = state[i];
 
     // HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13); // LD3
-
-    if (allTrue(state, servoCount) == true)
-        return HAL_OK;
-    else
-        return HAL_ERROR;
+    for (int i = 0; i < servoCount; i++)
+    {
+        if (state[i] == SERVO_SHUTDOWN || state[i] == SERVO_OFFLINE)
+            return false;
+    }
+    return true;
 }
 
-void dualTransferServo(volatile ServoXM4340 *servo, int instructionType, int packet_size, uint8_t *params_arr, int param_size)
+bool dualTransferServo(volatile ServoXM4340 *servo, int instructionType, int packet_size, uint8_t *params_arr, int param_size, uint32_t timeout)
 {
-    do
+    // RxBuffer clear
+    clear_Servo_RX_buffer(servo);
+    clear_RX_buffer();
+
+    // data received and processed in Uart_Callback function
+    // DXL_RxBuffer ready
+    HAL_UART_Receive_DMA(servo->huart, DXL_RxBuffer, packet_size);
+
+    // TX turn on
+    HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
+
+    sendServoCommand(servo->huart, servo->ID, instructionType, param_size, params_arr);
+
+    uint32_t tickstart = HAL_GetTick();
+    while (!TxFinished)
     {
-        // RxBuffer clear
-        clear_Servo_RX_buffer(servo);
-
-        // data received and processed in Uart_Callback function
-        // DXL_RxBuffer ready
-        HAL_UART_Receive_DMA(servo->huart, DXL_RxBuffer, packet_size);
-
-        // TX turn on
-        HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_SET);
-
-        sendServoCommand(servo->huart, servo->ID, instructionType, param_size, params_arr);
-
-        uint32_t tickstart = HAL_GetTick();
-        while (!TxFinished)
+        // wait until transmitting finished;
+        if ((HAL_GetTick() - tickstart) > 1500)
         {
-            // wait until transmitting finished;
-            if ((HAL_GetTick() - tickstart) > 1500)
-            {
-                servo->state = SERVO_OFFLINE;
-                break; // break while
-            }
-        };
+            servo->state = SERVO_OFFLINE;
+            break; // break while
+        }
+    };
 
-        // RX turn on
-        HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_RESET);
+    // RX turn on
+    HAL_GPIO_WritePin(servo->ctrlPort, servo->ctrlPin, GPIO_PIN_RESET);
 
-        // wait for receiving completed
-        getServoResponse(servo, packet_size);
-        if (servo->state == SERVO_OFFLINE)
-            break;
-
-    } while (!checkServoResponse(servo)); // redo if checking is not OK
+    // wait for receiving completed
+    getServoResponse(servo, packet_size, timeout);
+    if (servo->state == SERVO_ONLINE)
+        return true;
+    else
+        return false;
 }
 
 uint16_t sendServoCommand(UART_HandleTypeDef *huart, uint8_t servoId, uint8_t commandByte, uint8_t numParams, uint8_t *params)
@@ -1173,7 +1283,7 @@ uint16_t sendServoCommand(UART_HandleTypeDef *huart, uint8_t servoId, uint8_t co
     return crc_val;
 }
 
-void getServoResponse(volatile ServoXM4340 *servo, uint16_t RxLen)
+void getServoResponse(volatile ServoXM4340 *servo, uint16_t RxLen, uint32_t timeout)
 {
     RxFinished = false;
 
@@ -1183,48 +1293,56 @@ void getServoResponse(volatile ServoXM4340 *servo, uint16_t RxLen)
     while (!RxFinished)
     {
 
-        if ((HAL_GetTick() - tickstart) > 1000)
+        if ((HAL_GetTick() - tickstart) > timeout)
         {
             servo->state = SERVO_OFFLINE;
+            servo->RX_err_ctr++;
+            HAL_UART_AbortReceive(servo->huart);
             break; // break while
         }
     }
-
-    DXL_AssignRxBufferToServo(servo, 1, RxLen);
+    if (RxFinished)
+    {
+        DXL_AssignRxBufferToServo(servo, 1, RxLen);
+        if (checkServoResponse(servo))
+        {
+            servo->RX_err_ctr = 0;
+            servo->state = SERVO_ONLINE;
+        }
+        else
+        {
+            if (servo->Response.error >= 128)
+                servo->state = SERVO_SHUTDOWN;
+            else
+                servo->state = SERVO_OFFLINE;
+            servo->RX_err_ctr++;
+        }
+    }
 }
 
 void clear_Servo_RX_buffer(volatile ServoXM4340 *servo)
 {
-    for (int i = 0; i < SERVO_MAX_RX_BUFFER_SIZE; i++)
-    {
-        servo->Response.RxBuffer[i] = 0;
-    }
+    memset(servo->Response.RxBuffer, 0, sizeof(servo->Response.RxBuffer));
 }
-void clear_DXL_RX_buffer(int dataLen)
+void clear_RX_buffer(void)
 {
-    for (int i = 0; i < dataLen; i++)
-    {
-        DXL_RxBuffer[i] = 0;
-    }
+    memset(DXL_RxBuffer, 0, sizeof(DXL_RxBuffer));
 }
 
 void clear_TX_buffer(void)
 {
-    for (int i = 0; i < sizeof(DXL_TxBuffer); i++)
-    {
-        DXL_TxBuffer[i] = 0;
-    }
+    memset(DXL_TxBuffer, 0, sizeof(DXL_TxBuffer));
 }
 
-bool allTrue(int arr[], int len)
-{
-    for (int i = 0; i < len; i++)
-    {
-        if (arr[i] == 0 || arr[i] == SERVO_OFFLINE)
-            return false;
-    }
-    return true;
-}
+// bool allTrue(int state, int len)
+// {
+//     for (int i = 0; i < len; i++)
+//     {
+//         if (arr[i] == 0 || arr[i] == SERVO_OFFLINE)
+//             return false;
+//     }
+//     return true;
+// }
 
 bool checkServoResponse(volatile ServoXM4340 *servo)
 {
@@ -1243,27 +1361,34 @@ bool checkServoResponse(volatile ServoXM4340 *servo)
                 servo->Response.length = servo->Response.RxBuffer[INDEX_SATUS_PACKET_LEN_L];
                 servo->Response.error = servo->Response.RxBuffer[INDEX_SATUS_PACKET_ERR];
                 for (int i = 0; i < servo->Response.length - 4; i++)
-                {
                     servo->Response.params[i] = servo->Response.RxBuffer[9 + i];
+
+                if (servo->Response.error == 0)
+                {
+                    servo->RX_error = DXL_RX_ERROR_NONE;
+                    return true;
                 }
-                servo->state = SERVO_ONLINE;
-                return true;
+                else
+                {
+                    servo->RX_error = DXL_RX_ERROR_INSTRUCTION_FAILED;
+                    return false;
+                }
             }
             else
             {
-                servo->state = SERVO_OFFLINE;
+                servo->RX_error = DXL_RX_ERROR_CRC_WRONG;
                 return false;
             }
         }
         else
         {
-            servo->state = SERVO_OFFLINE;
+            servo->RX_error = DXL_RX_ERROR_ID_WRONG;
             return false;
         }
     }
     else
     {
-        servo->state = SERVO_OFFLINE;
+        servo->RX_error = DXL_RX_ERROR_HEADER_WRONG;
         return false;
     }
 }

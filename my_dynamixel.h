@@ -35,9 +35,17 @@
 // the basic size of status packet
 #define SIZE_STATUS_PACKET 11
 
-// servo starte
+// servo state
 #define SERVO_ONLINE 1
 #define SERVO_OFFLINE 0xff
+#define SERVO_SHUTDOWN -1
+
+#define DXL_RX_ERROR_NONE 0
+#define DXL_RX_ERROR_TIMEOUT 1
+#define DXL_RX_ERROR_INSTRUCTION_FAILED 2
+#define DXL_RX_ERROR_CRC_WRONG 3
+#define DXL_RX_ERROR_ID_WRONG 4
+#define DXL_RX_ERROR_HEADER_WRONG 5
 
 //-----------------------------------------------------------------------//
 #include "stdbool.h"
@@ -62,12 +70,15 @@ typedef struct ServoResponse
 typedef struct ServoXM4340
 {
     int state;
+    int RX_error;
+    int RX_err_ctr;
 
     int BaudRate;
     uint8_t ID;
     uint8_t OperatingMode;
     uint8_t DriveMode;
     uint8_t ReturnDelay;
+    uint8_t Shutdown;
     uint8_t TorqueENA;
 
     int32_t PresentPosition;
@@ -129,29 +140,29 @@ void setServo_BaudRate(volatile ServoXM4340 *servo, uint8_t baud);
 
 void setServo_ID(volatile ServoXM4340 *servo, uint8_t id);
 
-void setServo_OperatingMode(volatile ServoXM4340 *servo, uint8_t operatingMode);
+bool setServo_OperatingMode(volatile ServoXM4340 *servo, uint8_t operatingMode, uint32_t timeout);
 
-void setServo_TorqueENA(volatile ServoXM4340 *servo, uint8_t torque);
+bool setServo_TorqueENA(volatile ServoXM4340 *servo, uint8_t torque, uint32_t timeout);
 
-void setServo_GoalCurrent(volatile ServoXM4340 *servo, float current);
+bool setServo_GoalCurrent(volatile ServoXM4340 *servo, float current, uint32_t timeout);
 
-void setServo_GoalPosition(volatile ServoXM4340 *servo, float angle);
+bool setServo_GoalPosition(volatile ServoXM4340 *servo, float angle, uint32_t timeout);
 
-void setServo_GoalVelocity(volatile ServoXM4340 *servo, float velocity);
+bool setServo_GoalVelocity(volatile ServoXM4340 *servo, float velocity, uint32_t timeout);
 
-void setServo_CurrentLimit(volatile ServoXM4340 *servo, float current);
+bool setServo_CurrentLimit(volatile ServoXM4340 *servo, float current, uint32_t timeout);
 
-void setServo_VelocityLimit(volatile ServoXM4340 *servo, float velocity);
+bool setServo_VelocityLimit(volatile ServoXM4340 *servo, float velocity, uint32_t timeout);
 
-void setServo_ProfileAcceleration(volatile ServoXM4340 *servo, uint16_t maxAcc);
+bool setServo_ProfileAcceleration(volatile ServoXM4340 *servo, uint16_t maxAcc, uint32_t timeout);
 
-void setServo_ProfileVelocity(volatile ServoXM4340 *servo, uint16_t maxVel);
+bool setServo_ProfileVelocity(volatile ServoXM4340 *servo, uint16_t maxVel, uint32_t timeout);
 
-void setServo_DriveMode(volatile ServoXM4340 *servo, uint8_t conf);
+bool setServo_DriveMode(volatile ServoXM4340 *servo, uint8_t conf, uint32_t timeout);
 
-void setServo_ReturnDelayTime(volatile ServoXM4340 *servo, uint8_t delay_val);
+bool setServo_ReturnDelayTime(volatile ServoXM4340 *servo, uint8_t delay_val, uint32_t timeout);
 
-void setServo_Position_PGain(volatile ServoXM4340 *servo, uint16_t p_gain);
+bool setServo_Position_PGain(volatile ServoXM4340 *servo, uint16_t p_gain, uint32_t timeout);
 
 /*=================================================================================================*/
 /*=================================================================================================*/
@@ -159,35 +170,37 @@ void setServo_Position_PGain(volatile ServoXM4340 *servo, uint16_t p_gain);
 /*=================================================================================================*/
 /*=================================================================================================*/
 
-void getServo_BaudRate(volatile ServoXM4340 *servo);
+bool getServo_Shutdown(volatile ServoXM4340 *servo, uint32_t timeout);
 
-void getServo_OperatingMode(volatile ServoXM4340 *servo);
+bool getServo_BaudRate(volatile ServoXM4340 *servo, uint32_t timeout);
 
-void getServo_TorqueENA(volatile ServoXM4340 *servo);
+bool getServo_OperatingMode(volatile ServoXM4340 *servo, uint32_t timeout);
 
-float getServo_PresentCurrent(volatile ServoXM4340 *servo);
+bool getServo_TorqueENA(volatile ServoXM4340 *servo, uint32_t timeout);
 
-void getServo_GoalCurrent(volatile ServoXM4340 *servo);
+bool getServo_PresentCurrent(volatile ServoXM4340 *servo, uint32_t timeout, float *outCurrent);
 
-void getServo_CurrentLimit(volatile ServoXM4340 *servo);
+bool getServo_GoalCurrent(volatile ServoXM4340 *servo, uint32_t timeout);
 
-float getServo_PresentPosition(volatile ServoXM4340 *servo);
+bool getServo_CurrentLimit(volatile ServoXM4340 *servo, uint32_t timeout);
 
-float getServo_PresentVelocity(volatile ServoXM4340 *servo);
+bool getServo_PresentPosition(volatile ServoXM4340 *servo, uint32_t timeout, float *outPosition);
 
-void getServo_GoalVelocity(volatile ServoXM4340 *servo);
+bool getServo_PresentVelocity(volatile ServoXM4340 *servo, uint32_t timeout, float *outVelocity);
 
-void getServo_VelocityLimit(volatile ServoXM4340 *servo);
+bool getServo_GoalVelocity(volatile ServoXM4340 *servo, uint32_t timeout);
 
-void getServo_ProfileAcceleration(volatile ServoXM4340 *servo);
+bool getServo_VelocityLimit(volatile ServoXM4340 *servo, uint32_t timeout);
 
-void getServo_ProfileVelocity(volatile ServoXM4340 *servo);
+bool getServo_ProfileAcceleration(volatile ServoXM4340 *servo, uint32_t timeout);
 
-void getServo_DriveMode(volatile ServoXM4340 *servo);
+bool getServo_ProfileVelocity(volatile ServoXM4340 *servo, uint32_t timeout);
 
-void getServo_ReturnDelayTime(volatile ServoXM4340 *servo);
+bool getServo_DriveMode(volatile ServoXM4340 *servo, uint32_t timeout);
 
-void getServo_Position_PGain(volatile ServoXM4340 *servo);
+bool getServo_ReturnDelayTime(volatile ServoXM4340 *servo, uint32_t timeout);
+
+bool getServo_Position_PGain(volatile ServoXM4340 *servo, uint32_t timeout);
 
 /*=================================================================================================*/
 /*=================================================================================================*/
@@ -205,13 +218,13 @@ void syncWrite_GoalCurrent(volatile ServoXM4340 *servoList, int servoCount, cons
 /*=================================================================================================*/
 /*=================================================================================================*/
 
-void syncRead_ID(volatile ServoXM4340 *servoList, int servoCount);
+bool syncRead_ID(volatile ServoXM4340 *servoList, int servoCount, uint32_t timeout);
 
-void syncRead_PresentPosition(volatile ServoXM4340 *servoList, int servoCount, float *posList);
+bool syncRead_PresentPosition(volatile ServoXM4340 *servoList, int servoCount, float *posList, uint32_t timeout);
 
-void syncRead_PresentCurrent(volatile ServoXM4340 *servoList, int servoCount, float *curList);
+bool syncRead_PresentCurrent(volatile ServoXM4340 *servoList, int servoCount, float *curList, uint32_t timeout);
 
-void syncRead_PresentVelocity(volatile ServoXM4340 *servoList, int servoCount, float *velList);
+bool syncRead_PresentVelocity(volatile ServoXM4340 *servoList, int servoCount, float *velList, uint32_t timeout);
 
 /*=================================================================================================*/
 /*=================================================================================================*/
@@ -221,21 +234,21 @@ void syncRead_PresentVelocity(volatile ServoXM4340 *servoList, int servoCount, f
 
 void setServo_SyncWrite(volatile ServoXM4340 *servoArray, int servoCount, uint8_t addrLB, uint8_t addrHB, uint8_t addrSize, uint32_t *dataArray);
 
-HAL_StatusTypeDef getServo_SyncRead(volatile ServoXM4340 *servoArray, int servoCount, uint8_t addrLB, uint8_t addrHB, uint8_t addrSize);
+bool getServo_SyncRead(volatile ServoXM4340 *servoArray, int servoCount, uint8_t addrLB, uint8_t addrHB, uint8_t addrSize, uint32_t timeout);
 
-void dualTransferServo(volatile ServoXM4340 *servo, int instructionType, int packet_size, uint8_t *params_arr, int param_size);
+bool dualTransferServo(volatile ServoXM4340 *servo, int instructionType, int packet_size, uint8_t *params_arr, int param_size, uint32_t timeout);
 
 uint16_t sendServoCommand(UART_HandleTypeDef *huart, uint8_t servoId, uint8_t commandByte, uint8_t numParams, uint8_t *params);
 
-void getServoResponse(volatile ServoXM4340 *servo, uint16_t RxLen);
+void getServoResponse(volatile ServoXM4340 *servo, uint16_t RxLen, uint32_t timeout);
 
 void clear_Servo_RX_buffer(volatile ServoXM4340 *servo);
 
-void clear_DXL_RX_buffer(int dataLen);
+void clear_RX_buffer(void);
 
 void clear_TX_buffer(void);
 
-bool allTrue(int arr[], int len);
+// bool allTrue(int state, int len);
 
 bool checkServoResponse(volatile ServoXM4340 *servo);
 

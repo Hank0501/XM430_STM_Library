@@ -11,9 +11,9 @@
 #ifndef CONTROL_TABLE_H
 #define CONTROL_TABLE_H
 
-#define DXL_POS_RESOLUTION 0.0878906f // deg, 360/4096
-#define DXL_CUR_RESOLUTION 2.69f      // mA
-#define DXL_VEL_RESOLUTION 0.229f     // rpm
+#define DXL_POS_RESOLUTION 0.0878906f // to deg, 360/4096
+#define DXL_CUR_RESOLUTION 2.69f      // to mA
+#define DXL_VEL_RESOLUTION 0.229f     // to rpm
 
 // XM4340 control table
 #define GoalPosition_ADDR_LB 0x74
@@ -29,6 +29,10 @@
 #define Extended_Pos_CtrlMode 4
 #define CurrentBased_POS_CtrlMode 5
 #define PWM_CtrlMode 16
+
+#define Shutdown_ADDR_LB 0x3F
+#define Shutdown_ADDR_HB 0x00
+#define Shutdown_ByteSize 1
 
 #define TorqueEnable_ADDR_LB 0x40
 #define TorqueEnable_ADDR_HB 0x00
